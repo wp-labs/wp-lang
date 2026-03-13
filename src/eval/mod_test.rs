@@ -3,6 +3,7 @@ mod tests {
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::parser::parse_code::wpl_express;
     use orion_error::TestAssert;
+    use wp_model_core::model::Value;
     use wp_model_core::raw::RawData;
     use wp_primitives::Parser;
 
@@ -101,6 +102,50 @@ mod tests {
         let data = r#"{"sys": "unix" ,"key":  "hello boy"}"#;
         report_err(rule, data);
     }
+
+    #[test]
+    fn test_wparse_log_rule_parses_first_line() {
+        let rule = r#"
+            rule line {
+                (
+                    time,
+                    chars:level<[,]>,
+                    chars:target<[,]>,
+                    chars:content\0
+                )
+            }
+        "#;
+        let data = "2026-01-17 18:38:51.468263000 [INFO ] [ctrl   ] log conf: level: warn,ctrl=info,dfx=info,data=info";
+        let ppl = WplEvaluator::from_code(rule).assert();
+        let (record, residue) = ppl.proc(0, data, 0).assert();
+
+        assert_eq!(residue, "");
+
+        let level = record.field("level").and_then(|f| match f.get_value() {
+            Value::Chars(s) => Some(s.clone()),
+            _ => None,
+        });
+        let target = record.field("target").and_then(|f| match f.get_value() {
+            Value::Chars(s) => Some(s.clone()),
+            _ => None,
+        });
+        let content = record.field("content").and_then(|f| match f.get_value() {
+            Value::Chars(s) => Some(s.clone()),
+            _ => None,
+        });
+
+        assert_eq!(level.as_deref(), Some("INFO"));
+        assert_eq!(target.as_deref(), Some("ctrl"));
+        assert_eq!(
+            content.as_deref(),
+            Some("log conf: level: warn,ctrl=info,dfx=info,data=info")
+        );
+        assert!(matches!(
+            record.field("time").map(|f| f.get_value()),
+            Some(Value::Time(_))
+        ));
+    }
+
     fn report_err(rule: &str, data: &str) {
         let express = wpl_express.parse(rule).assert();
         let ppl = WplEvaluator::from(&express, None).assert();
