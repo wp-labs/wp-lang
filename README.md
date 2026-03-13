@@ -1,6 +1,7 @@
 # wp-lang
 
 ![CI](https://github.com/wp-labs/wp-lang/workflows/CI/badge.svg)
+[![codecov](https://codecov.io/gh/wp-labs/wp-lang/graph/badge.svg?token=6SVCXBHB6B)](https://codecov.io/gh/wp-labs/wp-lang)
 ![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)
 
 ## Overview
