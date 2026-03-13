@@ -1,0 +1,6 @@
+.run.gxl
+target
+.report
+*.log
+.claude/settings.local.json
+Cargo.lock
