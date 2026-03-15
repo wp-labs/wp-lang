@@ -1,0 +1,6 @@
+rule demo {
+  (
+    digit:id,
+    chars:name
+  )\,
+}

@@ -113,12 +113,47 @@ impl KvArrP {
         if let Ok(val) = quot_str.parse_next(input) {
             return Ok(Value::String(val.to_string()));
         }
+        let cp = *input;
         if let Ok(val) = interval_data.parse_next(input) {
-            let normalized = decode_escapes(val);
-            return Ok(Value::String(normalized));
+            if Self::interval_ends_at_boundary(input, sep)? {
+                let normalized = decode_escapes(val);
+                return Ok(Value::String(normalized));
+            }
+            *input = cp;
         }
         let raw = Self::take_unquoted(input, sep)?;
         Ok(Self::scalar_value(raw.as_str()))
+    }
+
+    fn interval_ends_at_boundary(rest: &&str, sep: &WplSepT<Self>) -> ModalResult<bool> {
+        let remainder = *rest;
+        if remainder.is_empty() {
+            return Ok(true);
+        }
+
+        if sep.is_to_end() {
+            let mut probe = remainder;
+            multispace0.parse_next(&mut probe)?;
+            return Ok(probe.is_empty());
+        }
+
+        if sep.is_pattern() {
+            let mut probe = remainder;
+            return Ok(sep.consume_sep(&mut probe).is_ok());
+        }
+
+        let mut probe = remainder;
+        let before_trim = probe.len();
+        multispace0.parse_next(&mut probe)?;
+        if probe.is_empty() {
+            return Ok(true);
+        }
+
+        if sep.is_space_sep() {
+            return Ok(probe.len() != before_trim);
+        }
+
+        Ok(probe.starts_with(sep.sep_str()))
     }
 
     fn take_unquoted(input: &mut &str, sep: &WplSepT<Self>) -> ModalResult<String> {
@@ -509,6 +544,24 @@ mod tests {
         assert_eq!(
             record.field("action").map(|s| s.as_field()),
             Some(&DataField::from_chars("action", "allow"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_pattern_sep_interval_prefix_value() -> AnyResult<()> {
+        let conf = WplField::try_parse("kvarr{,\\s(\\S=)}").assert();
+        let mut data = "command=() aaa, action=permit";
+        let parser = ParserTUnit::new(KvArrP::default(), conf);
+        let fields = parser.verify_parse_suc(&mut data).assert();
+        let record = DataRecord::from(fields);
+        assert_eq!(
+            record.field("command").map(|s| s.as_field()),
+            Some(&DataField::from_chars("command", "() aaa"))
+        );
+        assert_eq!(
+            record.field("action").map(|s| s.as_field()),
+            Some(&DataField::from_chars("action", "permit"))
         );
         Ok(())
     }

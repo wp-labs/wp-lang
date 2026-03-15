@@ -7,15 +7,15 @@ Each example lives in its own directory so the WPL source and sample payload sta
 Syntax check:
 
 ```bash
-cargo run --bin wpl-check -- syntax examples/wpl-check/csv_demo/rule.wpl
-cargo run --bin wpl-check -- syntax examples/wpl-check/csv_demo
+wpl-check syntax examples/wpl-check/csv_demo/rule.wpl
+wpl-check syntax examples/wpl-check/csv_demo
 ```
 
 Run one sample payload against a single rule:
 
 ```bash
-cargo run --bin wpl-check -- sample --rule examples/wpl-check/csv_demo/rule.wpl examples/wpl-check/csv_demo/sample.txt
-cargo run --bin wpl-check -- sample --rule examples/wpl-check/csv_demo
+wpl-check sample --rule examples/wpl-check/csv_demo/rule.wpl examples/wpl-check/csv_demo/sample.txt
+wpl-check sample --rule examples/wpl-check/csv_demo
 ```
 
 ## `package_demo`
@@ -23,7 +23,7 @@ cargo run --bin wpl-check -- sample --rule examples/wpl-check/csv_demo
 Run one sample payload against a package rule:
 
 ```bash
-cargo run --bin wpl-check -- sample --package --rule-name csv_user examples/wpl-check/package_demo
+wpl-check sample --package --rule-name csv_user examples/wpl-check/package_demo
 ```
 
 ## `log_line`
@@ -31,5 +31,21 @@ cargo run --bin wpl-check -- sample --package --rule-name csv_user examples/wpl-
 Log parsing example:
 
 ```bash
-cargo run --bin wpl-check -- sample --rule examples/wpl-check/log_line/rule.wpl examples/wpl-check/log_line/sample.txt
+wpl-check sample --rule examples/wpl-check/log_line/rule.wpl examples/wpl-check/log_line/sample.txt
+```
+
+## `nginx_access_clf`
+
+Nginx access log with CLF time in `[]`:
+
+```bash
+wpl-check sample --rule examples/wpl-check/nginx_access_clf
+```
+
+## `nginx_access_brace_time`
+
+Nginx-style line with time wrapped by `{}`:
+
+```bash
+wpl-check sample --rule examples/wpl-check/nginx_access_brace_time
 ```

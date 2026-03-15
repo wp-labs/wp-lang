@@ -67,5 +67,16 @@ Use `syntax` for source-only checks and `sample` to run one payload through a ru
 
 Reusable sample WPL and payload files extracted from tests live under `examples/wpl-check/`.
 
+## Codex Skill
+The repository-managed source for the `wpl-rule-check` Codex skill lives under `tools/skills/wpl-rule-check/`.
+
+Install or refresh the local skill with:
+
+```bash
+bash scripts/install-codex-skill.sh wpl-rule-check
+```
+
+This copies the skill into `~/.codex/skills/wpl-rule-check/`, which is the local runtime location used by Codex. Manage changes, review, and release history from the repository copy; treat `~/.codex/skills/` as an installed artifact.
+
 ## License
 Distributed under the Apache License 2.0. See [`LICENSE`](LICENSE).

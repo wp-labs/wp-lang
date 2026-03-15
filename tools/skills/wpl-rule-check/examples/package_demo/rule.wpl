@@ -1,0 +1,14 @@
+package demo {
+  rule csv_user {
+    (
+      digit:id,
+      chars:name
+    )\,
+  }
+
+  rule json_env {
+    (
+      exact_json(@sys,@key)
+    )
+  }
+}

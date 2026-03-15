@@ -1,0 +1,3 @@
+rule demo {
+  (kvarr(chars@a, chars@b, array/ip@c, time@time)\,)
+}

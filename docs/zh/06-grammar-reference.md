@@ -25,11 +25,11 @@
 
 ## 完整 EBNF 定义
 
-权威实现以 `crates/wp-lang` 解析器为准；此处与源代码保持同步。
+权威实现以当前仓库中的 `src/parser/` 解析器为准；此处与源代码保持同步。
 
 ```ebnf
 ; WPL 语法（EBNF）
-; 基于 crates/wp-lang 下解析实现（winnow）整理
+; 基于当前仓库 src/parser 下解析实现（winnow）整理
 ; 说明：本文件给出语法产生式与必要的词法约定。除显式标注外，token 之间允许可选空白 `ws`。
 
 wpl_document     = { package_decl } ;
@@ -383,6 +383,6 @@ ReservedKeyword  = "package" | "rule" | "alt" | "opt" | "some_of" | "seq" | "not
 
 ## 实现参考
 
-- 语法实现：`crates/wp-lang/src/parser/`
-- 管道函数：`crates/wp-lang/src/parser/wpl_fun.rs`
+- 语法实现：`src/parser/`
+- 管道函数：`src/parser/wpl_fun.rs`
 - 数据类型：外部 crate `wp-model-core`

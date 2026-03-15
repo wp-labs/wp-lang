@@ -25,11 +25,11 @@ This document provides the formal grammar definition of WPL, suitable for:
 
 ## Complete EBNF Definition
 
-The authoritative implementation is in the `crates/wp-lang` parser; this document is kept in sync with the source code.
+The authoritative implementation is in the `src/parser/` modules of this crate; this document is kept in sync with the source code.
 
 ```ebnf
 ; WPL Grammar (EBNF)
-; Based on the parser implementation (winnow) in crates/wp-lang
+; Based on the parser implementation (winnow) in src/parser/
 ; Note: This file provides grammar productions and necessary lexical conventions. Unless explicitly noted, optional whitespace `ws` is allowed between tokens.
 
 wpl_document     = { package_decl } ;
@@ -299,6 +299,7 @@ ReservedKeyword  = "package" | "rule" | "alt" | "opt" | "some_of" | "seq" | "not
 - `some_of` - Partial matching, matches some fields in the group
 - `seq` - Sequence matching, matches all fields in the group in order
 - `not` - Negation matching, matches content other than the fields in the group
+- These forms are group-level only. They should not be used as field wrappers inside another group's field list.
 
 ### Group Length and Separator
 - `group` can be followed by `[n]` and separator `sep`
@@ -382,6 +383,6 @@ Separators support two forms:
 
 ## Implementation Reference
 
-- Grammar implementation: `crates/wp-lang/src/parser/`
-- Pipe functions: `crates/wp-lang/src/parser/wpl_fun.rs`
+- Grammar implementation: `src/parser/`
+- Pipe functions: `src/parser/wpl_fun.rs`
 - Data types: External crate `wp-model-core`
