@@ -55,9 +55,12 @@ mod main  {
   #[usage(desp="lint code")]
   flow lint | rust_flow.lint {} ;
 
-  #[task(name="test")]
-  flow build  |   @test  {
-    gx.cmd ( "cargo test --all ${ENV_BUILD_FLAG}", log : "1" , out:"true"  );
+  flow build  |  _pub_local  {
+    gx.cmd ( "cargo build ${ENV_BUILD_FLAG}", log : "1" , out:"true"  );
+  }
+  flow _pub_local   {
+    gx.cmd (  "mkdir -p ${HOME}/bin" );
+    gx.cmd (  "cp ${MAIN_BLD_BINS}/wpl-check ${HOME}/bin/"  );
   }
 
 }
