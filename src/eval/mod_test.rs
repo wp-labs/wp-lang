@@ -105,17 +105,8 @@ mod tests {
 
     #[test]
     fn test_wparse_log_rule_parses_first_line() {
-        let rule = r#"
-            rule line {
-                (
-                    time,
-                    chars:level<[,]>,
-                    chars:target<[,]>,
-                    chars:content\0
-                )
-            }
-        "#;
-        let data = "2026-01-17 18:38:51.468263000 [INFO ] [ctrl   ] log conf: level: warn,ctrl=info,dfx=info,data=info";
+        let rule = include_str!("../../examples/wpl-check/log_line/rule.wpl");
+        let data = include_str!("../../examples/wpl-check/log_line/sample.txt").trim_end();
         let ppl = WplEvaluator::from_code(rule).assert();
         let (record, residue) = ppl.proc(0, data, 0).assert();
 

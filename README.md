@@ -53,5 +53,19 @@ Run:
 
 Benchmarks live under `benches/` and use Criterion.
 
+## Quick Parse Validation
+For quick syntax validation while editing WPL source, or to try one sample payload against a rule, use the bundled `wpl-check` tool:
+
+```bash
+cargo run --bin wpl-check -- syntax path/to/demo.wpl
+printf '%s\n' 'rule demo { (digit:id, chars:name) }' | cargo run --bin wpl-check -- syntax --rule --print -
+cargo run --bin wpl-check -- sample --rule examples/wpl-check/csv_demo/rule.wpl examples/wpl-check/csv_demo/sample.txt
+cargo run --bin wpl-check -- sample --package --rule-name csv_user examples/wpl-check/package_demo
+```
+
+Use `syntax` for source-only checks and `sample` to run one payload through a rule or expression. `sample` now treats a sample data file as the normal input form; `--data` is only for quick inline checks. By default, `wpl-check` looks for `rule.wpl` and `sample.txt`, and if you pass a directory it resolves those files inside the directory. If `sample` receives a package with multiple rules and no `--rule-name`, it reports the available rule names directly. Successful validation exits with code `0`; syntax or data parse failures exit non-zero.
+
+Reusable sample WPL and payload files extracted from tests live under `examples/wpl-check/`.
+
 ## License
 Distributed under the Apache License 2.0. See [`LICENSE`](LICENSE).
