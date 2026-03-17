@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4 - 2026-03-18
+- Extract the reusable `wpl-check` execution pipeline into `wpl::check`, including request types, source validation, sample execution, default `rule.wpl` / `sample.txt` resolution, and high-level `run_*_request` entry points for downstream integration.
+- Split the `wpl-check` binary into a thin CLI shell over the shared checker library and add a dedicated checker implementation guide in `docs/zh/09-checker-guide.md`.
+- Gate checker support behind explicit `check` and `wpl-check-cli` features, leaving the default feature set empty so downstream users do not compile checker code unless they opt in.
+- Fix sample target validation ordering so package rule-selection errors are reported before unrelated sample file I/O failures.
+
 ## 0.1.3 - 2026-03-15
 - Improve `kvarr` parsing so pattern-separated key/value data can keep bracket-prefixed values like `command=() aaa, action=permit` without regressing array or interval payload parsing.
 - Add a regression test for `kvarr{,\\s(\\S=)}` with free-text values that begin with bracketed segments.

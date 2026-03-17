@@ -62,6 +62,7 @@ WPL (Warp Processing Language) 是 `wp-lang` 使用的规则语言，用于描�
 | [04-language-reference.md](./04-language-reference.md) | 完整类型列表 + 语法元素 + 速查表 | 开发者 |
 | [05-functions-reference.md](./05-functions-reference.md) | 所有函数的标准化参考 | 开发者 |
 | [06-grammar-reference.md](./06-grammar-reference.md) | EBNF 形式化语法定义 | 编译器开发者 |
+| [09-checker-guide.md](./09-checker-guide.md) | checker 分层、API 设计与实现约定 | 工具开发者 / 集成开发者 |
 
 ---
 

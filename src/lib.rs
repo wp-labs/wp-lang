@@ -6,6 +6,8 @@ extern crate serde;
 extern crate winnow;
 
 mod ast;
+#[cfg(feature = "check")]
+pub mod check;
 pub mod compat;
 pub mod eval;
 pub mod parser;
