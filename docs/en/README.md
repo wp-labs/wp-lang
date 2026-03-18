@@ -62,6 +62,7 @@ WPL (Warp Processing Language) is the rule language used by the Warp Parse parsi
 | [04-language-reference.md](./04-language-reference.md) | Complete type list + syntax elements + quick reference | Developers |
 | [05-functions-reference.md](./05-functions-reference.md) | Standardized reference for all functions | Developers |
 | [06-grammar-reference.md](./06-grammar-reference.md) | EBNF formal grammar definition | Compiler developers |
+| [../zh/09-checker-guide.md](../zh/09-checker-guide.md) | Checker layering, API design, and implementation conventions | Tooling / integration developers |
 
 ---
 

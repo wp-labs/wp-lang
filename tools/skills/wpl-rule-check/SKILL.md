@@ -7,7 +7,19 @@ description: Draft, revise, and validate WPL parsing rules and sample payloads w
 
 Write WPL around a concrete sample first, then validate with `wpl-check`.
 
-Assume `wpl-check` is already installed and available in `PATH`.
+Prefer the bundled wrapper script:
+
+- `scripts/run-wpl-check.sh`
+- `scripts/import-wp-rule-example.sh`
+
+It resolves `wpl-check` in this order:
+
+1. `WPL_CHECK_BIN` if set
+2. `wpl-check` from `PATH`
+3. a local `wp-lang` checkout via `cargo run --features wpl-check-cli --bin wpl-check`
+4. `WPL_CHECK_MANIFEST_PATH` if pointed at a `wp-lang` `Cargo.toml`
+
+If none of these work, stop and tell the user how to install `wpl-check`.
 
 If the task is about how to write WPL, read:
 
@@ -15,6 +27,7 @@ If the task is about how to write WPL, read:
 - `references/wpl-grammar-reference.md` second for the portable syntax skeleton
 - `references/wpl-quick-patterns.md` third for fast drafting reminders
 - `references/wpl-examples.md` fourth for ready-made examples and adaptation templates
+- `references/wp-rule-repo.md` when the user wants real shared-rule examples from `https://github.com/wp-labs/wp-rule`
 - `references/cross-model-usage.md` when porting this skill to Claude, Gemini, Cursor, Cline, Continue, or other agent frameworks
 
 ## Workflow
@@ -26,8 +39,9 @@ If the task is about how to write WPL, read:
    - Expression only: `( ... )`
 3. Prefer storing the working pair as `rule.wpl` and `sample.txt`.
 4. If the task needs a reusable example, copy and adapt one from this skill's `examples/` directory.
-5. Validate syntax before sample parsing.
-6. Validate sample parsing before editing surrounding docs or tests.
+5. If the user wants a real shared-library example from `wp-rule`, first run `scripts/import-wp-rule-example.sh` to materialize a local `rule.wpl` / `sample.txt` pair.
+6. Validate syntax before sample parsing.
+7. Validate sample parsing before editing surrounding docs or tests.
 
 ## Authoring Rules
 
@@ -50,38 +64,47 @@ If the task is about how to write WPL, read:
 - Open `references/wpl-grammar-reference.md` when the exact syntax shape is unclear.
 - When you are unsure about separators, quoting, or repeat syntax, open `references/wpl-quick-patterns.md` before inventing syntax.
 - When the input looks like CSV, nginx access log, package-based selection, or simple line logs, start from `references/wpl-examples.md` instead of writing from scratch.
+- When the user explicitly wants team-style or production-style examples, open `references/wp-rule-repo.md` and use `wp-rule` as the external example source before inventing a new layout.
+- When working from `wp-rule`, prefer converting the target example with `scripts/import-wp-rule-example.sh` before manual edits.
 - If you are working inside the `wp-lang` repository, you may optionally cross-check `docs/zh/06-grammar-reference.md`, but this skill must remain usable without that repo.
 
 ## Validation Commands
 
-Run with the standalone `wpl-check` binary.
+Run through `scripts/run-wpl-check.sh` unless the user explicitly asked for the raw command.
+
+If the source example lives in `wp-rule`, first materialize a local working pair:
+
+```bash
+scripts/import-wp-rule-example.sh /path/to/wp-rule example_name
+scripts/import-wp-rule-example.sh /path/to/wp-rule/models/wpl/example_name /tmp/example_name
+```
 
 Syntax only:
 
 ```bash
-wpl-check syntax --rule path/to/rule.wpl
-wpl-check syntax --package path/to/rule.wpl
-wpl-check syntax --expr path/to/rule.wpl
+scripts/run-wpl-check.sh syntax --rule path/to/rule.wpl
+scripts/run-wpl-check.sh syntax --package path/to/rule.wpl
+scripts/run-wpl-check.sh syntax --expr path/to/rule.wpl
 ```
 
 Parse one sample:
 
 ```bash
-wpl-check sample --rule path/to/rule.wpl path/to/sample.txt
-wpl-check sample --package --rule-name rule_name path/to/rule.wpl path/to/sample.txt
+scripts/run-wpl-check.sh sample --rule path/to/rule.wpl path/to/sample.txt
+scripts/run-wpl-check.sh sample --package --rule-name rule_name path/to/rule.wpl path/to/sample.txt
 ```
 
 Directory shorthand with defaults:
 
 ```bash
-wpl-check syntax ./csv_demo
-wpl-check sample --rule ./csv_demo
+scripts/run-wpl-check.sh syntax ./csv_demo
+scripts/run-wpl-check.sh sample --rule ./csv_demo
 ```
 
 Quick inline sample only when the user does not want a file:
 
 ```bash
-wpl-check sample --rule --data '42,alice,' path/to/rule.wpl
+scripts/run-wpl-check.sh sample --rule --data '42,alice,' path/to/rule.wpl
 ```
 
 ## Reading Failures
@@ -95,16 +118,20 @@ When `wpl-check sample` fails, use the diagnostic fields directly:
 - `near`: nearby snippet
 - `^`: exact failure pointer on the rendered line
 
-Use `wpl-check syntax --print ...` when the normalized WPL shape matters.
+Use `scripts/run-wpl-check.sh syntax --print ...` when the normalized WPL shape matters.
 
 ## Repository Conventions
 
 - This skill is self-contained.
+- Tool wrapper lives under `scripts/`.
+- `wp-rule` import helper lives under `scripts/`.
 - Writing references live under `references/`.
 - Built-in examples live under `examples/`.
 - Cross-model adaptation material:
   - `references/cross-model-usage.md`
   - `references/portable-system-prompt.md`
+- External example-library note:
+  - `references/wp-rule-repo.md`
 - Portable syntax reference:
   - `references/wpl-grammar-reference.md`
 - Example cases bundled with the skill:

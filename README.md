@@ -78,5 +78,14 @@ bash scripts/install-codex-skill.sh wpl-rule-check
 
 This copies the skill into `~/.codex/skills/wpl-rule-check/`, which is the local runtime location used by Codex. Manage changes, review, and release history from the repository copy; treat `~/.codex/skills/` as an installed artifact.
 
+The skill now bundles two helper scripts:
+
+- `tools/skills/wpl-rule-check/scripts/run-wpl-check.sh`
+  Resolves `wpl-check` from `WPL_CHECK_BIN`, `PATH`, or a local `wp-lang` checkout and falls back to `cargo run --features wpl-check-cli --bin wpl-check`
+- `tools/skills/wpl-rule-check/scripts/import-wp-rule-example.sh`
+  Imports a `wp-rule` example from `models/wpl/<name>/parse.wpl` plus `sample.dat` into a local `rule.wpl` and `sample.txt` working pair
+
+This lets the skill use `https://github.com/wp-labs/wp-rule` as a real example library while still validating examples through `wpl-check`.
+
 ## License
 Distributed under the Apache License 2.0. See [`LICENSE`](LICENSE).
