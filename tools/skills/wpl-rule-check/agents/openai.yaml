@@ -1,4 +1,0 @@
-interface:
-  display_name: "WPL Rule Check"
-  short_description: "Author and validate WPL parsing rules"
-  default_prompt: "Use $wpl-rule-check to draft or fix a WPL rule and validate it with the bundled wpl-check runner."

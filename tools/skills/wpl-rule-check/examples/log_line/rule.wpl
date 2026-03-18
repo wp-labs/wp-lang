@@ -1,8 +1,0 @@
-rule line {
-  (
-    time:time,
-    chars:level<[,]>,
-    chars:target<[,]>,
-    chars:content\0
-  )
-}

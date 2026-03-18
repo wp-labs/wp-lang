@@ -18,8 +18,8 @@
 
 - `src/check/`
   提供可复用的检查能力，供库内和下游直接调用
-- `src/bin/wpl-check/`
-  仅负责 CLI 参数、帮助文本和结果打印
+- `wpl-check`
+  作为独立 companion 仓库承载 CLI、examples 和 agent skill
 
 这个边界的好处是：
 
@@ -56,7 +56,7 @@ src/check/
 - `runner.rs`
   负责高层执行编排
 
-当前实现可直接参考：
+当前库层实现可直接参考：
 
 - [`src/check/mod.rs`](../../src/check/mod.rs)
 - [`src/check/model.rs`](../../src/check/model.rs)
@@ -290,18 +290,18 @@ let evaluation = evaluate_sample(&parsed, ..., &sample)?;
 - rule 选择校验
 - 结构化结果返回
 
-### 应放在 `src/bin/wpl-check/` 的逻辑
+### 应放在 companion `wpl-check` 项目的逻辑
 
 - `syntax` / `sample` 子命令解析
 - `--help` 文本
 - `--print` 控制是否打印 normalized source
 - 最终 stdout/stderr 展示格式
 
-当前 bin 侧实现可参考：
+当前 companion 项目实现可参考：
 
-- [`src/bin/wpl-check.rs`](../../src/bin/wpl-check.rs)
-- [`src/bin/wpl-check/app.rs`](../../src/bin/wpl-check/app.rs)
-- [`src/bin/wpl-check/cli.rs`](../../src/bin/wpl-check/cli.rs)
+- <https://github.com/wp-labs/wpl-check/blob/main/src/main.rs>
+- <https://github.com/wp-labs/wpl-check/blob/main/src/app.rs>
+- <https://github.com/wp-labs/wpl-check/blob/main/src/cli.rs>
 
 ---
 
@@ -413,16 +413,12 @@ CLI 只测试：
 
 如果 checker 需要给下游复用，推荐用 feature 做显式分层。
 
-当前做法：
+当前 `wp-lang` 只保留：
 
 - `check`
   开启库能力
-- `wpl-check-cli`
-  开启 CLI，并依赖 `check`
 
-对应配置可参考：
-
-- [`Cargo.toml`](../../Cargo.toml)
+对应配置可参考 [`Cargo.toml`](../../Cargo.toml)。
 
 推荐模式：
 
@@ -430,12 +426,6 @@ CLI 只测试：
 [features]
 default = []
 check = []
-wpl-check-cli = ["check"]
-
-[[bin]]
-name = "wpl-check"
-path = "src/bin/wpl-check.rs"
-required-features = ["wpl-check-cli"]
 ```
 
 这样下游可以只启用：
@@ -462,7 +452,7 @@ use wpl::check::{Mode, SampleInput, SampleRequest, SourceRequest, run_sample_req
 4. 在 `input.rs` 实现默认路径与文件加载
 5. 在 `runner.rs` 实现 `run_syntax_request` / `run_sample_request`
 6. 在 `mod.rs` 统一导出公共 API
-7. 最后再写 CLI 壳
+7. 最后在 companion `wpl-check` 项目里写 CLI 壳
 
 不要反过来从 CLI 开始堆逻辑。
 
