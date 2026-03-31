@@ -117,46 +117,76 @@ fn take_string_or_quoted(input: &mut &str) -> WResult<String> {
 
 pub fn wpl_fun(input: &mut &str) -> WResult<WplFun> {
     multispace0.parse_next(input)?;
-    let fun = alt((
-        // Parse not() wrapper function first (needs special handling for recursive parsing)
-        parse_pipe_not,
-        alt((
-            // Put digit_range first to avoid any prefix matching issues
-            call_fun_args2::<DigitRangeArg>.map(|arg| {
-                WplFun::DigitRange(DigitRange {
-                    begin: arg.begin,
-                    end: arg.end,
-                })
-            }),
-            call_fun_args1::<RegexMatch>.map(WplFun::RegexMatch),
-            call_fun_args1::<StartsWith>.map(WplFun::StartsWith),
-            call_fun_args1::<TakeField>.map(WplFun::SelectTake),
-            call_fun_args0::<SelectLast>.map(WplFun::SelectLast),
-            call_fun_args2::<TargetCharsHas>.map(WplFun::TargetCharsHas),
-            call_fun_args1::<CharsHas>.map(WplFun::CharsHas),
-            call_fun_args2::<TargetCharsNotHas>.map(WplFun::TargetCharsNotHas),
-            call_fun_args1::<CharsNotHasArg>
-                .map(|arg| WplFun::CharsNotHas(CharsNotHas { value: arg.value })),
-            call_fun_args2::<TargetCharsIn>.map(WplFun::TargetCharsIn),
-            call_fun_args1::<CharsInArg>.map(|arg| WplFun::CharsIn(CharsIn { value: arg.value })),
-        )),
-        alt((
-            call_fun_args2::<TargetDigitHas>.map(WplFun::TargetDigitHas),
-            call_fun_args1::<DigitHasArg>
-                .map(|arg| WplFun::DigitHas(DigitHas { value: arg.value })),
-            call_fun_args2::<TargetDigitIn>.map(WplFun::TargetDigitIn),
-            call_fun_args1::<DigitInArg>.map(|arg| WplFun::DigitIn(DigitIn { value: arg.value })),
-            call_fun_args2::<TargetIpIn>.map(WplFun::TargetIpIn),
-            call_fun_args1::<IpInArg>.map(|arg| WplFun::IpIn(IpIn { value: arg.value })),
-            call_fun_args1::<TargetHas>.map(WplFun::TargetHas),
-            call_fun_args0::<HasArg>.map(|_| WplFun::Has(Has)),
-            call_fun_args0::<JsonUnescape>.map(WplFun::TransJsonUnescape),
-            call_fun_args0::<Base64Decode>.map(WplFun::TransBase64Decode),
-            call_fun_args2::<ReplaceFunc>.map(WplFun::TransCharsReplace),
-        )),
-    ))
-    .parse_next(input)?;
+    let fun = alt((parse_pipe_not, parse_char_fun, parse_misc_fun)).parse_next(input)?;
     Ok(fun)
+}
+
+fn parse_char_fun(input: &mut &str) -> WResult<WplFun> {
+    alt((
+        parse_char_fun_primary,
+        parse_char_fun_secondary,
+    ))
+    .parse_next(input)
+}
+
+fn parse_misc_fun(input: &mut &str) -> WResult<WplFun> {
+    alt((
+        parse_misc_fun_primary,
+        parse_misc_fun_secondary,
+    ))
+    .parse_next(input)
+}
+
+fn parse_char_fun_primary(input: &mut &str) -> WResult<WplFun> {
+    alt((
+        call_fun_args2::<DigitRangeArg>.map(|arg| {
+            WplFun::DigitRange(DigitRange {
+                begin: arg.begin,
+                end: arg.end,
+            })
+        }),
+        call_fun_args1::<RegexMatch>.map(WplFun::RegexMatch),
+        call_fun_args1::<StartsWith>.map(WplFun::StartsWith),
+        call_fun_args1::<TakeField>.map(WplFun::SelectTake),
+        call_fun_args0::<SelectLast>.map(WplFun::SelectLast),
+        call_fun_args2::<TargetCharsHas>.map(WplFun::TargetCharsHas),
+    ))
+    .parse_next(input)
+}
+
+fn parse_char_fun_secondary(input: &mut &str) -> WResult<WplFun> {
+    alt((
+        call_fun_args1::<CharsHas>.map(WplFun::CharsHas),
+        call_fun_args2::<TargetCharsNotHas>.map(WplFun::TargetCharsNotHas),
+        call_fun_args1::<CharsNotHasArg>
+            .map(|arg| WplFun::CharsNotHas(CharsNotHas { value: arg.value })),
+        call_fun_args2::<TargetCharsIn>.map(WplFun::TargetCharsIn),
+        call_fun_args1::<CharsInArg>.map(|arg| WplFun::CharsIn(CharsIn { value: arg.value })),
+    ))
+    .parse_next(input)
+}
+
+fn parse_misc_fun_primary(input: &mut &str) -> WResult<WplFun> {
+    alt((
+        call_fun_args2::<TargetDigitHas>.map(WplFun::TargetDigitHas),
+        call_fun_args1::<DigitHasArg>.map(|arg| WplFun::DigitHas(DigitHas { value: arg.value })),
+        call_fun_args2::<TargetDigitIn>.map(WplFun::TargetDigitIn),
+        call_fun_args1::<DigitInArg>.map(|arg| WplFun::DigitIn(DigitIn { value: arg.value })),
+        call_fun_args2::<TargetIpIn>.map(WplFun::TargetIpIn),
+        call_fun_args1::<IpInArg>.map(|arg| WplFun::IpIn(IpIn { value: arg.value })),
+    ))
+    .parse_next(input)
+}
+
+fn parse_misc_fun_secondary(input: &mut &str) -> WResult<WplFun> {
+    alt((
+        call_fun_args1::<TargetHas>.map(WplFun::TargetHas),
+        call_fun_args0::<HasArg>.map(|_| WplFun::Has(Has)),
+        call_fun_args0::<JsonUnescape>.map(WplFun::TransJsonUnescape),
+        call_fun_args0::<Base64Decode>.map(WplFun::TransBase64Decode),
+        call_fun_args2::<ReplaceFunc>.map(WplFun::TransCharsReplace),
+    ))
+    .parse_next(input)
 }
 
 /// Parse not(inner_function) - requires special handling for recursive parsing
