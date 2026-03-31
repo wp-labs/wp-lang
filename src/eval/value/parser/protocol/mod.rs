@@ -8,6 +8,7 @@ use wp_primitives::Parser;
 use wp_primitives::WResult as ModalResult;
 
 pub mod array;
+pub mod bad_json;
 pub mod base64;
 pub mod json;
 pub mod json_exact;

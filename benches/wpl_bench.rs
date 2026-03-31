@@ -1,9 +1,13 @@
-use criterion::{Criterion, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use orion_error::TestAssert;
 use std::fmt::Write;
 use wp_model_core::raw::RawData;
+use wp_parse_api::PipeProcessor;
 use wp_primitives::Parser;
+use wpl::eval::builtins::json_like::JsonLikeProc;
 use wpl::{WplEvaluator, wpl_express};
+
+const UNKNOWN_JSON_SAMPLE: &str = include_str!("../tests/unknow.json");
 
 fn wpl_parse(lpp: &WplEvaluator, data: &RawData) {
     for _ in 0..1000 {
@@ -148,6 +152,40 @@ fn criterion_json_decoded_pipe(c: &mut Criterion) {
     c.bench_function("json_decoded_pipe", |b| b.iter(|| wpl_parse(&lpp, &raw)));
 }
 
+fn bench_json_like(proc: &JsonLikeProc, data: &RawData) {
+    for _ in 0..1000 {
+        let _ = proc.process(data.clone());
+    }
+}
+
+fn criterion_json_like_vs_json(c: &mut Criterion) {
+    let json_rule = wpl_express.parse("(json)").assert();
+    let json_eval = WplEvaluator::from(&json_rule, None).assert();
+    let json_like = JsonLikeProc;
+
+    let cases = [
+        (
+            "plain_text",
+            RawData::from_string("plain text log line".to_string()),
+        ),
+        (
+            "broken_json_like",
+            RawData::from_string(UNKNOWN_JSON_SAMPLE.to_string()),
+        ),
+    ];
+
+    let mut group = c.benchmark_group("json_like_vs_json");
+    for (name, raw) in &cases {
+        group.bench_with_input(BenchmarkId::new("json_like", name), raw, |b, data| {
+            b.iter(|| bench_json_like(&json_like, data))
+        });
+        group.bench_with_input(BenchmarkId::new("json", name), raw, |b, data| {
+            b.iter(|| wpl_parse(&json_eval, data))
+        });
+    }
+    group.finish();
+}
+
 fn build_kv_bulk(n: usize) -> String {
     // 生成形如 k0=1 k1=2 ... 的 kv 文本
     let mut s = String::with_capacity(n * 8);
@@ -229,6 +267,7 @@ criterion_group!(
     criterion_json_flat_no_subs,
     criterion_json_flat_with_subs,
     criterion_json_decoded_pipe,
+    criterion_json_like_vs_json,
     criterion_kv_bulk,
     criterion_proto_text_deep,
     criterion_proto_text_wide

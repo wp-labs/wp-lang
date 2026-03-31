@@ -7,6 +7,7 @@ use wp_parse_api::PipeHold;
 pub mod base64;
 pub mod bom;
 pub mod hex;
+pub mod json_like;
 mod pipe_fun;
 pub mod quotation;
 pub mod registry;
@@ -14,6 +15,7 @@ pub mod registry;
 use base64::Base64Proc;
 use bom::BomClearProc;
 use hex::HexProc;
+use json_like::JsonLikeProc;
 use quotation::EscQuotaProc;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -48,6 +50,10 @@ fn bom_strip_stage() -> PipeHold {
     Arc::new(BomClearProc)
 }
 
+fn json_like_stage() -> PipeHold {
+    Arc::new(JsonLikeProc)
+}
+
 /// Ensure core decode/unquote pipe units are registered in the plg_pipe registry.
 pub fn ensure_builtin_pipe_units() {
     BUILTIN_PIPE_INIT.call_once(|| {
@@ -55,6 +61,7 @@ pub fn ensure_builtin_pipe_units() {
         registry::register_pipe_unit("decode/hex", decode_hex_stage);
         registry::register_pipe_unit("unquote/unescape", unquote_unescape_stage);
         registry::register_pipe_unit("strip/bom", bom_strip_stage);
+        registry::register_pipe_unit("json_like", json_like_stage);
     });
 }
 
@@ -81,6 +88,7 @@ mod tests {
                 .any(|name| name.to_uppercase() == "UNQUOTE/UNESCAPE")
         );
         assert!(units.iter().any(|name| name.to_uppercase() == "STRIP/BOM"));
+        assert!(units.iter().any(|name| name.to_uppercase() == "JSON_LIKE"));
     }
 
     #[test]

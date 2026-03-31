@@ -42,6 +42,7 @@ WPL (Warp Processing Language) 是 `wp-lang` 使用的规则语言，用于描�
 | 💡 理解概念 | [02-core-concepts.md](./02-core-concepts.md) |
 | 📝 解析 Nginx 日志 | [03-practical-guide.md § 1](./03-practical-guide.md#1-解析-web-服务器日志) |
 | 📊 解析 JSON 数据 | [03-practical-guide.md § 2](./03-practical-guide.md#2-解析-json-数据) |
+| 🧩 区分合法 JSON 与坏 JSON | [04-language-reference.md § JSON-like 路由](./04-language-reference.md#-json-like-路由) |
 | 🔑 解析 KV 键值对 | [03-practical-guide.md § 3](./03-practical-guide.md#3-解析-kv-键值对) |
 | 🔐 处理 Base64 编码 | [03-practical-guide.md § 4](./03-practical-guide.md#4-处理编码数据) |
 | ✅ 验证字段 | [03-practical-guide.md § 5](./03-practical-guide.md#5-字段验证与过滤) |

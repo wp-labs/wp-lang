@@ -2,6 +2,7 @@ use super::super::prelude::*;
 use std::io::Cursor;
 use wp_model_core::model::FNameStr;
 
+use crate::eval::builtins::json_like::is_json_like_text;
 use crate::eval::runtime::field::FieldEvalUnit;
 use crate::eval::value::parse_def::PatternParser;
 use crate::eval::value::parser::protocol::json_impl::JsonProc;
@@ -23,6 +24,9 @@ impl PatternParser for JsonP {
         out: &mut Vec<DataField>,
     ) -> ModalResult<()> {
         multispace0.parse_next(data)?;
+        if !is_json_like_text(data) {
+            return fail.parse_next(data);
+        }
         let mut cursor = Cursor::new(data.as_bytes());
         let mut deserializer = Deserializer::from_reader(&mut cursor);
         if let Ok(value) = Value::deserialize(&mut deserializer) {
@@ -71,6 +75,7 @@ mod tests {
 
     static KV_FMT: Lazy<KeyValue> = Lazy::new(KeyValue::default);
     static RAW_FMT: Lazy<Raw> = Lazy::new(Raw::new);
+    const UNKNOWN_JSON_SAMPLE: &str = include_str!("../../../../../tests/unknow.json");
 
     #[test]
     fn test_json_std() -> AnyResult<()> {
@@ -120,6 +125,94 @@ mod tests {
         assert!(tdc.field("_origin/vuln_name").is_some());
         assert!(tdc.field("_origin/detail_info").is_some());
         assert!(tdc.field("_origin/rsp_status").is_some());
+        Ok(())
+    }
+
+    #[test]
+    fn test_unknown_json_fixture_fails_when_sample_is_not_valid_json() -> AnyResult<()> {
+        let rule = r#"rule test { (json) }"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        assert!(
+            pipe.proc(0, UNKNOWN_JSON_SAMPLE, 0).is_err(),
+            "unknow.json currently contains raw control characters / broken JSON and should fail"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_json_preserves_garbled_unicode_when_json_is_valid() -> AnyResult<()> {
+        let rule =
+            r#"rule test { (json(chars@host, chars@method, chars@req_body, chars@rsp_body)) }"#;
+        let data = r#"{
+            "host": "qup.f.360.cn",
+            "method": "POST",
+            "req_body": "\f\u000b\u0001\u0002\rHgB\u0000\u0000",
+            "rsp_body": "孇駓Jw˾iVgdɜQ倝A݆c"
+        }"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        let (tdc, _) = pipe.proc(0, data, 0)?;
+
+        let expected_host = DataField::from_chars("host", "qup.f.360.cn");
+        assert_eq!(
+            tdc.field("host").map(|s| s.as_field()),
+            Some(&expected_host)
+        );
+
+        let expected_method = DataField::from_chars("method", "POST");
+        assert_eq!(
+            tdc.field("method").map(|s| s.as_field()),
+            Some(&expected_method)
+        );
+
+        let expected_req_body = DataField::from_chars(
+            "req_body".to_string(),
+            r#"\f\u000b\u0001\u0002\rHgB\u0000\u0000"#.to_string(),
+        );
+        assert_eq!(
+            tdc.field("req_body").map(|s| s.as_field()),
+            Some(&expected_req_body)
+        );
+
+        let expected_rsp_body =
+            DataField::from_chars("rsp_body".to_string(), "孇駓Jw˾iVgdɜQ倝A݆c".to_string());
+        assert_eq!(
+            tdc.field("rsp_body").map(|s| s.as_field()),
+            Some(&expected_rsp_body)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_json_works_without_explicit_json_like_pipe() -> AnyResult<()> {
+        let rule = r#"rule test { (json(chars@host, chars@method)) }"#;
+        let data = r#"{"host":"qup.f.360.cn","method":"POST"}"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        let (tdc, rest) = pipe.proc(0, data, 0)?;
+        assert_eq!(rest, "");
+        assert_eq!(
+            tdc.field("host").map(|s| s.as_field()),
+            Some(&DataField::from_chars("host", "qup.f.360.cn"))
+        );
+        assert_eq!(
+            tdc.field("method").map(|s| s.as_field()),
+            Some(&DataField::from_chars("method", "POST"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_json_rejects_plain_text_without_explicit_json_like_pipe() -> AnyResult<()> {
+        let rule = r#"rule test { (json(chars@host, chars@method)) }"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        assert!(pipe.proc(0, "plain text log line", 0).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_json_still_rejects_broken_json_like_input() -> AnyResult<()> {
+        let rule = r#"rule test { (json(chars@host, chars@method)) }"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        assert!(pipe.proc(0, UNKNOWN_JSON_SAMPLE, 0).is_err());
         Ok(())
     }
 

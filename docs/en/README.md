@@ -42,6 +42,7 @@ WPL (Warp Processing Language) is the rule language used by the Warp Parse parsi
 | 💡 Understand concepts | [02-core-concepts.md](./02-core-concepts.md) |
 | 📝 Parse Nginx logs | [03-practical-guide.md § 1](./03-practical-guide.md#1-parse-web-server-logs) |
 | 📊 Parse JSON data | [03-practical-guide.md § 2](./03-practical-guide.md#2-parse-json-data) |
+| 🧩 Distinguish valid vs broken JSON | [04-language-reference.md § JSON-like Routing](./04-language-reference.md#json-like-routing) |
 | 🔑 Parse KV pairs | [03-practical-guide.md § 3](./03-practical-guide.md#3-parse-kv-pairs) |
 | 🔐 Handle Base64 encoding | [03-practical-guide.md § 4](./03-practical-guide.md#4-handle-encoded-data) |
 | ✅ Validate fields | [03-practical-guide.md § 5](./03-practical-guide.md#5-field-validation--filtering) |

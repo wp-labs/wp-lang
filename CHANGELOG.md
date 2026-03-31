@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.6 - 2026-03-31
+- Add the preorder `json_like` pipe for lightweight JSON-like sniffing before full parsing, plus coverage for plain text, valid JSON, and broken JSON-like payloads.
+- Teach `json(...)` to run the same lightweight JSON-like sniff internally so plain text is rejected faster without requiring an explicit `|json_like|` guard.
+- Add the `bad_json` field parser alias, which preserves the original payload as a `chars` field for JSON-like inputs that fail strict JSON parsing.
+- Add Criterion benchmarks comparing `json_like` and `json` on plain-text and broken JSON-like inputs.
+- Update the Chinese and English WPL docs with `json_like` / `json` / `bad_json` routing guidance and end-to-end examples for valid-vs-broken JSON fallback rules.
+
 ## 0.1.4 - 2026-03-18
 - Extract the reusable `wpl-check` execution pipeline into `wpl::check`, including request types, source validation, sample execution, default `rule.wpl` / `sample.txt` resolution, and high-level `run_*_request` entry points for downstream integration.
 - Split the `wpl-check` binary, examples, and `wpl-rule-check` skill packaging into the companion `wpl-check` project, leaving `wp-lang` with the reusable `wpl::check` library API only.

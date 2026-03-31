@@ -3,7 +3,6 @@ use crate::ast::WplSep;
 use crate::ast::build_pattern;
 use crate::ast::fld_fmt::WplFieldFmt;
 use crate::ast::{DEFAULT_FIELD_KEY, WplField, WplFieldSet, WplPipe};
-use crate::parser::datatype::take_datatype;
 use crate::parser::utils::{
     peek_next, peek_str, take_key, take_parentheses, take_ref_path_or_quoted, take_to_end,
     take_var_name,
@@ -14,7 +13,7 @@ use winnow::ascii::{digit0, digit1, multispace0};
 use winnow::combinator::{alt, delimited, fail, opt, preceded, repeat};
 use winnow::error::{StrContext, StrContextValue};
 use winnow::stream::Stream;
-use winnow::token::{literal, take, take_till};
+use winnow::token::{literal, take, take_till, take_while};
 // Use workspace-wide parser result alias to decouple from winnow's concrete type
 use wp_model_core::model::DataType;
 use wp_primitives::Parser;
@@ -22,8 +21,34 @@ use wp_primitives::WResult as ModalResult;
 use wp_primitives::symbol::{ctx_desc, ctx_literal};
 use wp_primitives::utils::{RestAble, get_scope};
 
+const BAD_JSON_META_NAME: &str = "bad_json";
+
 // Removed unused generic helper that depended on winnow's two-parameter ModalResult.
 // If needed later, prefer concrete `&str` + `ModalResult` signatures via wp_primitives::WResult.
+
+fn take_meta_token<'a>(input: &mut &'a str) -> ModalResult<&'a str> {
+    take_while(1.., |c: char| c.is_alphanumeric() || c == '_' || c == '/').parse_next(input)
+}
+
+fn resolve_meta(token: &str) -> Option<(DataType, String)> {
+    if token == BAD_JSON_META_NAME {
+        Some((DataType::Chars, token.to_string()))
+    } else {
+        DataType::from(token)
+            .ok()
+            .map(|meta| (meta, token.to_string()))
+    }
+}
+
+fn parse_meta(input: &mut &str) -> ModalResult<(DataType, String)> {
+    multispace0.parse_next(input)?;
+    let token = take_meta_token.parse_next(input)?;
+    if let Some(meta) = resolve_meta(token) {
+        Ok(meta)
+    } else {
+        fail.context(ctx_desc("bad meta")).parse_next(input)
+    }
+}
 
 pub fn wpl_end_sep_str(input: &mut &str) -> ModalResult<String> {
     repeat(1.., preceded(literal("\\"), take(1u8)))
@@ -123,7 +148,7 @@ fn wpl_field_fmt(input: &mut &str) -> ModalResult<WplFieldFmt> {
     }
     Ok(WplFieldFmt::default())
 }
-fn wpl_opt_meta(input: &mut &str) -> ModalResult<(DataType, bool)> {
+fn wpl_opt_meta(input: &mut &str) -> ModalResult<((DataType, String), bool)> {
     multispace0.parse_next(input)?;
     let mut is_opt = true;
     let meta_key = opt(delimited(
@@ -140,21 +165,22 @@ fn wpl_opt_meta(input: &mut &str) -> ModalResult<(DataType, bool)> {
         Some((_, v, _)) => Some(v),
     };
     if let Some(mk) = meta_key {
-        match DataType::from(mk) {
-            Ok(meta) => return Ok((meta, is_opt)),
-            Err(_) => {
-                fail.context(ctx_desc("bad meta")).parse_next(input)?;
-            }
+        if let Some(meta) = resolve_meta(mk) {
+            return Ok((meta, is_opt));
         }
+        fail.context(ctx_desc("bad meta")).parse_next(input)?;
     }
-    Ok((DataType::Chars, is_opt))
+    Ok((
+        (DataType::Chars, DataType::Chars.static_name().to_string()),
+        is_opt,
+    ))
 }
 
 #[allow(clippy::bind_instead_of_map)]
 fn wpl_id_field(input: &mut &str) -> ModalResult<(String, WplField)> {
     let before_len = input.len();
     let mut content = None;
-    let (meta_type, is_opt) = wpl_opt_meta.parse_next(input)?;
+    let ((meta_type, meta_name), is_opt) = wpl_opt_meta.parse_next(input)?;
 
     if meta_type == DataType::Symbol {
         content = opt(take_parentheses)
@@ -182,7 +208,7 @@ fn wpl_id_field(input: &mut &str) -> ModalResult<(String, WplField)> {
 
     let mut conf = WplField {
         name: f_key.map(|s| s.into()),
-        meta_name: meta_type.static_name().into(),
+        meta_name: meta_name.into(),
         meta_type,
         fmt_conf,
         separator: sep,
@@ -246,8 +272,8 @@ fn wpl_field_impl(input: &mut &str) -> ModalResult<WplField> {
             conf.continuous_cnt = Some(rep_cnt.parse::<usize>().unwrap_or(255));
         }
     }
-    let main_meta = take_datatype.parse_next(input)?;
-    conf.meta_name = main_meta.static_name().into();
+    let (main_meta, meta_name) = parse_meta.parse_next(input)?;
+    conf.meta_name = meta_name.into();
     conf.meta_type = main_meta;
     parse_symbol(input, &mut conf)?;
     parse_peek_symbol(input, &mut conf)?;
@@ -333,6 +359,14 @@ mod tests {
         assert_eq!(wpl_end_sep_str.parse("\\!\\~"), Ok("!~".to_string()));
         assert_eq!(wpl_end_sep_str.parse("\\!\\\""), Ok("!\"".to_string()));
         assert_eq!(wpl_end_sep_str.parse(r#"\!\""#), Ok("!\"".to_string()));
+    }
+
+    #[test]
+    fn test_bad_json_meta_alias() {
+        let conf = WplField::try_parse("bad_json:raw").assert();
+        assert_eq!(conf.meta_type, DataType::Chars);
+        assert_eq!(conf.meta_name.as_str(), "bad_json");
+        assert_eq!(conf.name.as_ref().map(|s| s.as_str()), Some("raw"));
     }
 
     #[test]

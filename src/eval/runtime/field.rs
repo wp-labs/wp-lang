@@ -5,6 +5,7 @@ use crate::eval::runtime::vm_unit::WplEvaluator;
 use crate::eval::value::parse_def::{FieldParser, Hold, ParserHold};
 use crate::eval::value::parser::ParserFactory;
 use crate::eval::value::parser::base::CharsP;
+use crate::eval::value::parser::protocol::bad_json::BadJsonP;
 use crate::generator::FieldGenConf;
 use crate::generator::{FmtField, GenChannel};
 use crate::parser::error::WplCodeResult;
@@ -17,6 +18,8 @@ use wp_primitives::WResult as ModalResult;
 
 use super::pipe_exec::PipeExecutor;
 use super::subunit::SubUnitManager;
+
+const BAD_JSON_META_NAME: &str = "bad_json";
 
 #[derive(Clone, Getters)]
 pub struct FieldEvalUnit {
@@ -81,6 +84,14 @@ impl FieldEvalUnit {
     }
 
     pub fn create(index: usize, conf: WplField, group_enum: WplGroupType) -> WplCodeResult<Self> {
+        if conf.meta_name() == BAD_JSON_META_NAME {
+            return Ok(FieldEvalUnit::new(
+                index,
+                conf,
+                Hold::new(BadJsonP::default()),
+                group_enum,
+            ));
+        }
         Self::create_next(index, conf.meta_type().clone(), conf, group_enum)
     }
     pub fn from_auto(conf: WplField) -> Self {

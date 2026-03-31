@@ -16,6 +16,8 @@ use wp_primitives::WResult as ModalResult;
 use wp_primitives::symbol::ctx_desc;
 use wp_primitives::utils::RestAble;
 
+const BAD_JSON_META_NAME: &str = "bad_json";
+
 impl<T> FieldParser for T
 where
     T: PatternParser,
@@ -29,6 +31,11 @@ where
         f_name: Option<FNameStr>,
         out: &mut Vec<DataField>,
     ) -> ModalResult<()> {
+        let parse_pattern_first = if fpu.conf().meta_name() == BAD_JSON_META_NAME {
+            true
+        } else {
+            fpu.conf().meta_type().parse_patten_first()
+        };
         let mut name = Some(
             if *fpu.conf().meta_type() == DataType::Json
                 || *fpu.conf().meta_type() == DataType::ExactJson
@@ -63,7 +70,7 @@ where
             }
             Ok(())
         } else {
-            if fpu.conf().meta_type().parse_patten_first() {
+            if parse_pattern_first {
                 self.pattern_parse(
                     e_id,
                     fpu,
