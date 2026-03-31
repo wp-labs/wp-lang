@@ -122,19 +122,11 @@ pub fn wpl_fun(input: &mut &str) -> WResult<WplFun> {
 }
 
 fn parse_char_fun(input: &mut &str) -> WResult<WplFun> {
-    alt((
-        parse_char_fun_primary,
-        parse_char_fun_secondary,
-    ))
-    .parse_next(input)
+    alt((parse_char_fun_primary, parse_char_fun_secondary)).parse_next(input)
 }
 
 fn parse_misc_fun(input: &mut &str) -> WResult<WplFun> {
-    alt((
-        parse_misc_fun_primary,
-        parse_misc_fun_secondary,
-    ))
-    .parse_next(input)
+    alt((parse_misc_fun_primary, parse_misc_fun_secondary)).parse_next(input)
 }
 
 fn parse_char_fun_primary(input: &mut &str) -> WResult<WplFun> {
