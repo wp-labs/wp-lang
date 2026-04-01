@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.7 - 2026-04-01
+- Fix `bad_json` so it only matches JSON-like payloads that fail strict JSON parsing, instead of incorrectly accepting valid JSON or plain text.
+- Add an explicit `bad_json does not match valid json input` diagnostic detail when `bad_json` is tried against valid JSON.
+- Add regression coverage for valid-JSON rejection, plain-text rejection, and the end-to-end `|json_like| -> bad_json` fallback path.
+
 ## 0.1.6 - 2026-03-31
 - Add the preorder `json_like` pipe for lightweight JSON-like sniffing before full parsing, plus coverage for plain text, valid JSON, and broken JSON-like payloads.
 - Teach `json(...)` to run the same lightweight JSON-like sniff internally so plain text is rejected faster without requiring an explicit `|json_like|` guard.
