@@ -64,9 +64,7 @@ impl PipeExecutor {
                     }
                 }
                 PipeEnum::Group(group) => {
-                    let Some(idx) =
-                        cursor.ensure_active_index(data, Some(FieldSelectorSpec::Last))?
-                    else {
+                    let Some(idx) = cursor.ensure_active_index(data, None)? else {
                         continue;
                     };
                     let removed = data.remove(idx);

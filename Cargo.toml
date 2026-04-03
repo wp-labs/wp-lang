@@ -1,6 +1,6 @@
 [package]
 name = "wp-lang"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2024"
 description = "WPL language crate with AST, parser, evaluator, builtins, and generators."
 license = "Apache-2.0"

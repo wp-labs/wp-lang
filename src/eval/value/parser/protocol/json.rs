@@ -575,6 +575,50 @@ mod tests {
         }
         Ok(())
     }
+
+    #[test]
+    fn test_json_take_then_group_pipe_uses_selected_field() -> AnyResult<()> {
+        let rule = r#"rule ops {
+            (
+                json(chars@log)
+                | take(log)
+                | (
+                    time:log_time<[,]>,
+                    chars:obj<[,]>,
+                    chars:level<[,]>,
+                    chars:content\0
+                )
+            )
+        }"#;
+        let data = r#"{"date":1775125000.51395,"log":"[2026-04-02 18:16:40.513][vaultwarden::api::notifications][INFO] Closing WS connection from 220.181.41.82\n","time":"2026-04-02T10:16:40.513816575Z","container_name":"vaultwarden","filename":"/host/var/lib/docker/containers/8ec1e73e0108526423dcd459ca7c6356d544742d0dcb75199eec3f1f6a8c9ea0/8ec1e73e0108526423dcd459ca7c6356d544742d0dcb75199eec3f1f6a8c9ea0-json.log","app_name":"vaultwarden","host_name":"93208eeb93ec"}"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        let (tdc, rest) = pipe.proc(0, data, 0)?;
+
+        assert_eq!(rest, "");
+        assert!(matches!(
+            tdc.field("log_time").map(|s| s.as_field().get_value()),
+            Some(wp_model_core::model::Value::Time(_))
+        ));
+        assert_eq!(
+            tdc.field("obj").map(|s| s.as_field()),
+            Some(&DataField::from_chars(
+                "obj",
+                "vaultwarden::api::notifications"
+            ))
+        );
+        assert_eq!(
+            tdc.field("level").map(|s| s.as_field()),
+            Some(&DataField::from_chars("level", "INFO"))
+        );
+        assert_eq!(
+            tdc.field("content").map(|s| s.as_field()),
+            Some(&DataField::from_chars(
+                "content",
+                "Closing WS connection from 220.181.41.82\\n"
+            ))
+        );
+        Ok(())
+    }
     #[test]
     fn test_json_8() -> AnyResult<()> {
         let rule = r#"rule test { (json) }"#;

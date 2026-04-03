@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.8 - 2026-04-03
+- Fix field-level group pipes so they keep using the field selected by `take(...)` instead of incorrectly falling back to the last parsed field.
+- Add regression coverage for nested JSON-log parsing through `json(chars@log) | take(log) | (...)`, ensuring the second-stage group parser consumes the selected field payload.
+- Preserve the existing `take(...)` plus field-pipe behavior while fixing the `take(...)` plus group-pipe execution path.
+
 ## 0.1.7 - 2026-04-01
 - Fix `bad_json` so it only matches JSON-like payloads that fail strict JSON parsing, instead of incorrectly accepting valid JSON or plain text.
 - Add an explicit `bad_json does not match valid json input` diagnostic detail when `bad_json` is tried against valid JSON.
