@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7 - 2026-04-12
+- Vendor the `idcard` implementation into `wp-lang/src/idcard`, removing the external `idcard` crate dependency while preserving the existing mainland / Hong Kong / Macau / Taiwan identity-card validation and fake-data helpers used by the runtime parser.
+- Keep the physical `id_card` parser behavior unchanged while switching it to the new in-crate implementation, so downstream users no longer pull the legacy `idcard` dependency graph into `wp-lang`.
+
 ## 0.1.6 - 2026-03-31
 - Add the preorder `json_like` pipe for lightweight JSON-like sniffing before full parsing, plus coverage for plain text, valid JSON, and broken JSON-like payloads.
 - Teach `json(...)` to run the same lightweight JSON-like sniff internally so plain text is rejected faster without requiring an explicit `|json_like|` guard.
