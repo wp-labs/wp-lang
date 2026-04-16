@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.10 - 2026-04-16
+- Merge the `bad_json` matcher fix back into the release line so valid JSON and plain text no longer get captured as `bad_json` fallback output.
+- Include the field-level group-pipe fix from `0.1.8`, preserving the `take(...)`-selected field when a group parser is chained after a field pipe.
+- Keep the `0.1.9` in-crate `idcard` implementation changes while carrying forward the parser behavior fixes that were missing from the published `0.1.9` package.
+
 ## 0.1.9 - 2026-04-12
 - Vendor the `idcard` implementation into `wp-lang/src/idcard`, removing the external `idcard` crate dependency while preserving the existing mainland / Hong Kong / Macau / Taiwan identity-card validation and fake-data helpers used by the runtime parser.
 - Keep the physical `id_card` parser behavior unchanged while switching it to the new in-crate implementation, so downstream users no longer pull the legacy `idcard` dependency graph into `wp-lang`.
