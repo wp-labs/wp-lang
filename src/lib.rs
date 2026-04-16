@@ -15,6 +15,7 @@ pub mod parser;
 pub mod macro_def;
 //mod checker;
 pub mod generator;
+mod idcard;
 mod pkg;
 pub mod precompile;
 mod setting;

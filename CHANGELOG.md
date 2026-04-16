@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.9 - 2026-04-12
+- Vendor the `idcard` implementation into `wp-lang/src/idcard`, removing the external `idcard` crate dependency while preserving the existing mainland / Hong Kong / Macau / Taiwan identity-card validation and fake-data helpers used by the runtime parser.
+- Keep the physical `id_card` parser behavior unchanged while switching it to the new in-crate implementation, so downstream users no longer pull the legacy `idcard` dependency graph into `wp-lang`.
+
 ## 0.1.8 - 2026-04-03
 - Fix field-level group pipes so they keep using the field selected by `take(...)` instead of incorrectly falling back to the last parsed field.
 - Add regression coverage for nested JSON-log parsing through `json(chars@log) | take(log) | (...)`, ensuring the second-stage group parser consumes the selected field payload.
