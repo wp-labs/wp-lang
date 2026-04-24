@@ -29,7 +29,7 @@ wp-connector-api = "0.8"
 wp-error = "0.8"
 wp-log = "0.2"
 wp-specs = "0.8"
-orion-error = "0.6"
+orion-error = "0.7"
 wp_primitives = { package = "wp-primitives", version = "0.2" }
 derive-getters = "0.5"
 log = "0.4"
