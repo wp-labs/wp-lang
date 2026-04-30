@@ -13,8 +13,8 @@ use wp_parse_api::{PipeHold, WparseError, WparseReason};
 
 use crate::parser::error::{WplCodeError, WplCodeReason};
 use crate::parser::wpl_rule::wpl_rule;
-use orion_error::{ErrorWith, UvsFrom};
 use orion_error::conversion::ToStructError;
+use orion_error::{ErrorWith, UvsFrom};
 use wp_log::debug_edata;
 use wp_model_core::model::DataRecord;
 use wp_primitives::Parser;
@@ -298,13 +298,13 @@ impl StopWatch {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::error::IntoWplCodeError;
     use crate::ast::fld_fmt::for_test::{fdc2, fdc2_1, fdc3, fdc4_1};
     use crate::ast::{WplField, WplFieldFmt};
     use crate::compat::New1;
     use crate::eval::builtins::raw_to_utf8_string;
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::eval::value::parse_def::Hold;
+    use crate::parser::error::IntoWplCodeError;
     use crate::parser::error::WplCodeResult;
     use crate::{WparseResult, WplExpress, register_wpl_pipe};
     use orion_error::testcase::TestAssert;
@@ -493,11 +493,14 @@ mod tests {
 
         register_wpl_pipe!("plg_pipe/MOCK-STAGE", || Hold::new(MockStage));
 
-        let mut expr = WplExpress::new(vec![fdc3("auto", " ", true).map_err(|e| e.into_wpl_err())?]);
+        let mut expr =
+            WplExpress::new(vec![fdc3("auto", " ", true).map_err(|e| e.into_wpl_err())?]);
         expr.pipe_process = vec![SmolStr::from("plg_pipe/MOCK-STAGE")];
 
         let evaluator = WplEvaluator::from(&expr, None)?;
-        let results = evaluator.preorder_proc(RawData::from_string("data".to_string())).map_err(|e| e.into_wpl_err())?;
+        let results = evaluator
+            .preorder_proc(RawData::from_string("data".to_string()))
+            .map_err(|e| e.into_wpl_err())?;
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].result, "data-mock");
         assert_eq!(results[0].name, "mock_stage");
@@ -523,7 +526,9 @@ mod tests {
     #[test]
     fn test_ignore_cnt() -> WplCodeResult<()> {
         let mut data = r#"2345,2021-7-15 7:50:32,9OPP-MU-JME2-YGUW,chars_740"#;
-        let conf = WplExpress::new(vec![fdc4_1("_", ",", true, 4).map_err(|e| e.into_wpl_err())?]);
+        let conf = WplExpress::new(vec![
+            fdc4_1("_", ",", true, 4).map_err(|e| e.into_wpl_err())?,
+        ]);
         let ppl = WplEvaluator::from(&conf, None)?;
         let result = ppl.parse_groups(0, &mut data).assert();
         assert_eq!(data, "");
@@ -531,7 +536,9 @@ mod tests {
         result.items.iter().for_each(|f| println!("{}", f));
 
         let mut data = r#"2345,2021-7-15 7:50:32,9OPP-MU-JME2-YGUW,chars_740"#;
-        let conf = WplExpress::new(vec![fdc4_1("_", ",", true, 3).map_err(|e| e.into_wpl_err())?]);
+        let conf = WplExpress::new(vec![
+            fdc4_1("_", ",", true, 3).map_err(|e| e.into_wpl_err())?,
+        ]);
         let ppl = WplEvaluator::from(&conf, None)?;
         let result = ppl.parse_groups(0, &mut data).assert();
         assert_eq!(data, "chars_740");
@@ -580,7 +587,9 @@ mod tests {
         let test_data = RawData::from_string("hello".to_string());
 
         if let Some(processor) = create_preorder_pipe_unit("direct-test") {
-            let result = processor.process(test_data.clone()).map_err(|e| e.into_wpl_err())?;
+            let result = processor
+                .process(test_data.clone())
+                .map_err(|e| e.into_wpl_err())?;
             assert_eq!(raw_to_utf8_string(&result), "hello-mock");
         }
 

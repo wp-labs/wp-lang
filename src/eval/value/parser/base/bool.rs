@@ -1,8 +1,8 @@
 use super::super::prelude::*;
 use crate::generator::FieldGenConf;
 use crate::generator::{GenChannel, ParserValue};
-use crate::parser::utils::{quot_r_str, quot_str, take_to_end, window_path};
 use crate::parser::error::WplCodeResult;
+use crate::parser::utils::{quot_r_str, quot_str, take_to_end, window_path};
 use wp_model_core::model::DataField;
 use wp_model_core::model::DataType;
 use wp_model_core::model::FNameStr;

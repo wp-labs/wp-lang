@@ -62,7 +62,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
-    
+
     #[test]
     fn test_quotation() -> WplCodeResult<()> {
         let data = RawData::from_string(r#""hello""#.to_string());
@@ -89,7 +89,9 @@ mod tests {
 
         // Test with Bytes input
         let bytes_data = RawData::Bytes(Bytes::from_static(br#""hello world""#));
-        let result = EscQuotaProc.process(bytes_data).map_err(|e| e.into_wpl_err())?;
+        let result = EscQuotaProc
+            .process(bytes_data)
+            .map_err(|e| e.into_wpl_err())?;
         assert!(matches!(result, RawData::Bytes(_)));
         assert_eq!(
             crate::eval::builtins::raw_to_utf8_string(&result),
@@ -100,7 +102,9 @@ mod tests {
         let arc_data = RawData::ArcBytes(Arc::from(
             r#""test with \"quotes\" and \backslash""#.as_bytes().to_vec(),
         ));
-        let result = EscQuotaProc.process(arc_data).map_err(|e| e.into_wpl_err())?;
+        let result = EscQuotaProc
+            .process(arc_data)
+            .map_err(|e| e.into_wpl_err())?;
         assert!(matches!(result, RawData::ArcBytes(_)));
         assert_eq!(
             crate::eval::builtins::raw_to_utf8_string(&result),

@@ -122,7 +122,8 @@ impl PatternParser for ArrayP {
 
         // 构造元素字段配置，并用对应解析器生成 2 个元素
         let mut items: Vec<DataField> = Vec::with_capacity(2);
-        let elem_conf = WplField::sub_for_arr(elem_meta.to_string().as_str()).map_err(|e| e.into_wpl_err())?;
+        let elem_conf =
+            WplField::sub_for_arr(elem_meta.to_string().as_str()).map_err(|e| e.into_wpl_err())?;
         let elem_parser = ParserFactory::create(&elem_meta)?;
         let sep = WplSep::default();
 
@@ -227,8 +228,14 @@ mod tests {
         let pipe = WplEvaluator::from_code(rule)?;
         let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         let expected = vec![
-            DataField::from_ip("ips/[0]", IpAddr::from_str("1.1.1.1").map_err(|e| e.into_wpl_err())?),
-            DataField::from_ip("ips/[1]", IpAddr::from_str("2.2.2.2").map_err(|e| e.into_wpl_err())?),
+            DataField::from_ip(
+                "ips/[0]",
+                IpAddr::from_str("1.1.1.1").map_err(|e| e.into_wpl_err())?,
+            ),
+            DataField::from_ip(
+                "ips/[1]",
+                IpAddr::from_str("2.2.2.2").map_err(|e| e.into_wpl_err())?,
+            ),
         ];
         let expected = DataField::from_arr("ips".to_string(), expected);
         assert_eq!(tdc.get_field_owned("ips"), Some(expected));

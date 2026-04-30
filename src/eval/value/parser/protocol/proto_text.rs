@@ -122,9 +122,9 @@ mod tests {
     use crate::ast::WplStatementType;
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::eval::value::test_utils::ParserTUnit;
+    use crate::parser::error::WplCodeResult;
     use crate::parser::parse_code::wpl_express;
     use crate::parser::wpl_rule::wpl_rule;
-    use crate::parser::error::WplCodeResult;
     use orion_error::testcase::TestAssert;
     use wp_model_core::model::{DataRecord, DataType};
     use wp_primitives::Parser;

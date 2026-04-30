@@ -46,8 +46,8 @@ impl PatternParser for ExactJsonP {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::error::IntoWplCodeError;
     use super::*;
+    use crate::parser::error::IntoWplCodeError;
 
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::eval::value::test_utils::ParserTUnit;

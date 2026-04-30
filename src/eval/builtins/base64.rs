@@ -20,7 +20,9 @@ impl PipeProcessor for Base64Proc {
                     .decode(s.as_bytes())
                     .owe(WparseReason::from_data())
                     .doing("base64 decode")?;
-                let vstring = String::from_utf8(decoded).owe(WparseReason::from_data()).doing("to-json")?;
+                let vstring = String::from_utf8(decoded)
+                    .owe(WparseReason::from_data())
+                    .doing("to-json")?;
                 Ok(RawData::from_string(vstring))
             }
             RawData::Bytes(b) => {
@@ -52,7 +54,7 @@ mod tests {
     use crate::parser::error::WplCodeResult;
 
     use super::*;
-    
+
     #[test]
     fn test_base64() -> WplCodeResult<()> {
         let data = RawData::from_string("aGVsbG8=".to_string());
@@ -68,7 +70,9 @@ mod tests {
         ));
 
         let bytes_data = RawData::Bytes(Bytes::from_static(b"aGVsbG8="));
-        let result = Base64Proc.process(bytes_data).map_err(|e| e.into_wpl_err())?;
+        let result = Base64Proc
+            .process(bytes_data)
+            .map_err(|e| e.into_wpl_err())?;
         assert!(matches!(result, RawData::Bytes(_)));
         assert_eq!(crate::eval::builtins::raw_to_utf8_string(&result), "hello");
 

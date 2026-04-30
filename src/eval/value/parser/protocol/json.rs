@@ -65,8 +65,8 @@ mod tests {
     use crate::compat::OptionConv;
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::eval::value::test_utils::ParserTUnit;
-    use crate::parser::wpl_rule::wpl_rule;
     use crate::parser::error::WplCodeResult;
+    use crate::parser::wpl_rule::wpl_rule;
     use orion_error::testcase::TestAssert;
 
     use wp_model_core::model::{DataRecord, DataType};
@@ -101,7 +101,11 @@ mod tests {
             .parse("rule test {(json(base64@a:_a, _@c))}")
             .assert();
 
-        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
+        let f_conf = conf
+            .statement
+            .first_field()
+            .no_less("first field")
+            .map_err(|e| e.into_wpl_err())?;
         let mut data = r#"{"a":"aGVsbG8=","b":2,"c": "gogogo"}"#;
         let mut out = Vec::new();
         let ups_sep = WplSep::default();
@@ -243,7 +247,11 @@ mod tests {
         let conf = wpl_rule
             .parse("rule test {(json(_@_origin*,_@payload/packet_data))}")
             .assert();
-        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
+        let f_conf = conf
+            .statement
+            .first_field()
+            .no_less("first field")
+            .map_err(|e| e.into_wpl_err())?;
         let mut data = LONG_DATA;
         let fpu = FieldEvalUnit::from_auto(f_conf.clone());
         let ups_sep = WplSep::default();
@@ -272,7 +280,11 @@ mod tests {
     #[test]
     fn test_json_tianyan2() -> WplCodeResult<()> {
         let conf = wpl_rule.parse("rule test {(json(_@*))}").assert();
-        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
+        let f_conf = conf
+            .statement
+            .first_field()
+            .no_less("first field")
+            .map_err(|e| e.into_wpl_err())?;
         let mut data = LONG_DATA;
         let fpu = FieldEvalUnit::from_auto(f_conf.clone());
         let ups_sep = WplSep::default();
@@ -296,7 +308,11 @@ mod tests {
                 "rule test {(json(_@*,ip@alarm_sip , json@_origin, _@_origin/*,ip@_origin/sip)) }",
             )
             .assert();
-        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
+        let f_conf = conf
+            .statement
+            .first_field()
+            .no_less("first field")
+            .map_err(|e| e.into_wpl_err())?;
         let mut data = LONG_DATA;
         let fpu = FieldEvalUnit::from_auto(f_conf.clone());
         let mut out = Vec::new();
@@ -333,7 +349,11 @@ mod tests {
         let conf = wpl_rule
             .parse(r#"rule test {(json(chars@action/text)\\\0)}"#)
             .assert();
-        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
+        let f_conf = conf
+            .statement
+            .first_field()
+            .no_less("first field")
+            .map_err(|e| e.into_wpl_err())?;
         let mut data = JSON_DATA1;
         let fpu = FieldEvalUnit::from_auto(f_conf.clone());
         let mut out = Vec::new();
@@ -355,7 +375,11 @@ mod tests {
     #[test]
     fn test_json_jt2() -> WplCodeResult<()> {
         let conf = wpl_rule.parse(r#"rule test {(json\0)}"#).assert();
-        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
+        let f_conf = conf
+            .statement
+            .first_field()
+            .no_less("first field")
+            .map_err(|e| e.into_wpl_err())?;
         let mut data = JSON_DATA2;
         let fpu = FieldEvalUnit::for_test(JsonP::default(), f_conf.clone());
         let mut out = Vec::new();
@@ -558,7 +582,11 @@ mod tests {
                 "rule test {(json(chars@path,chars@txt) | take(path) | json_unescape() | take(txt) | json_unescape())}"
             )
             .assert();
-        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
+        let f_conf = conf
+            .statement
+            .first_field()
+            .no_less("first field")
+            .map_err(|e| e.into_wpl_err())?;
         let fpu = FieldEvalUnit::from_auto(f_conf.clone());
         let ups_sep = WplSep::default();
         let mut out = Vec::new();

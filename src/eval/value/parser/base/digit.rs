@@ -115,8 +115,8 @@ mod tests {
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::eval::value::parser::protocol::json::JsonP;
     use crate::eval::value::test_utils::ParserTUnit;
-    use crate::parser::parse_code::wpl_express;
     use crate::parser::error::WplCodeResult;
+    use crate::parser::parse_code::wpl_express;
     use orion_error::testcase::TestAssert;
     use wp_model_core::model::{DataRecord, Value};
     use wp_model_core::raw::RawData;

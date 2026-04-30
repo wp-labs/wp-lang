@@ -15,16 +15,24 @@ impl PipeProcessor for HexProc {
     fn process(&self, data: RawData) -> WparseResult<RawData> {
         match data {
             RawData::String(s) => {
-                let decoded = hex::decode(s.as_bytes()).owe(WparseReason::from_data()).doing("hex decode")?;
-                let vstring = String::from_utf8(decoded).owe(WparseReason::from_data()).doing("to-json")?;
+                let decoded = hex::decode(s.as_bytes())
+                    .owe(WparseReason::from_data())
+                    .doing("hex decode")?;
+                let vstring = String::from_utf8(decoded)
+                    .owe(WparseReason::from_data())
+                    .doing("to-json")?;
                 Ok(RawData::from_string(vstring))
             }
             RawData::Bytes(b) => {
-                let decoded = hex::decode(b.as_ref()).owe(WparseReason::from_data()).doing("hex decode")?;
+                let decoded = hex::decode(b.as_ref())
+                    .owe(WparseReason::from_data())
+                    .doing("hex decode")?;
                 Ok(RawData::Bytes(Bytes::from(decoded)))
             }
             RawData::ArcBytes(b) => {
-                let decoded = hex::decode(b.as_ref()).owe(WparseReason::from_data()).doing("hex decode")?;
+                let decoded = hex::decode(b.as_ref())
+                    .owe(WparseReason::from_data())
+                    .doing("hex decode")?;
                 // 注意：RawData::ArcBytes 现在使用 Arc<Vec<u8>>
                 Ok(RawData::ArcBytes(Arc::new(decoded)))
             }
@@ -44,7 +52,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
-    
+
     #[test]
     fn test_hex() -> WplCodeResult<()> {
         let data = RawData::from_string("48656c6c6f20776f726c6421".to_string());

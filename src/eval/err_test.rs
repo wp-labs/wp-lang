@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::parser::error::IntoWplCodeError;
     use crate::eval::runtime::vm_unit::WplEvaluator;
-    use crate::parser::parse_code::wpl_express;
+    use crate::parser::error::IntoWplCodeError;
     use crate::parser::error::WplCodeResult;
+    use crate::parser::parse_code::wpl_express;
     use orion_error::testcase::TestAssert;
     use wp_model_core::raw::RawData;
     use wp_primitives::Parser;

@@ -221,7 +221,9 @@ mod tests {
         let rule = r#" rule x { (kv(array/chars@dip))}"#;
         let pipe = WplEvaluator::from_code(rule)?;
 
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
+        let (tdc, _) = pipe
+            .proc(0, RawData::from_string(data.to_string()), 0)
+            .map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
 
         Ok(())
@@ -232,7 +234,9 @@ mod tests {
         let rule = r#" rule x { (kv(array/ip@dip))}"#;
         let pipe = WplEvaluator::from_code(rule)?;
 
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
+        let (tdc, _) = pipe
+            .proc(0, RawData::from_string(data.to_string()), 0)
+            .map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         Ok(())
     }
@@ -242,13 +246,17 @@ mod tests {
         let data = r#"dip=[]"#;
         let rule = r#" rule x { (kv(array/ip@dip))}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
+        let (tdc, _) = pipe
+            .proc(0, RawData::from_string(data.to_string()), 0)
+            .map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         assert!(tdc.field("dip").is_some());
 
         let rule = r#" rule x { (kv(array/ip@dip))}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
+        let (tdc, _) = pipe
+            .proc(0, RawData::from_string(data.to_string()), 0)
+            .map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         assert!(tdc.field("dip").is_some());
         Ok(())
@@ -259,7 +267,9 @@ mod tests {
         let data = r#"d=["1","1"]|e=["2","2"]|a= []|b=["3","3"]"#;
         let rule = r#" rule x { some_of(kv(array/chars))\| }"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
+        let (tdc, _) = pipe
+            .proc(0, RawData::from_string(data.to_string()), 0)
+            .map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         Ok(())
     }
@@ -307,7 +317,9 @@ mod tests {
         let rule = r#" rule x { (kv(chars@x.a:y.a),kv(chars@x.b),kv(digit@x.c))\!\|} "#;
         let pipe = WplEvaluator::from_code(rule)?;
 
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
+        let (tdc, _) = pipe
+            .proc(0, RawData::from_string(data.to_string()), 0)
+            .map_err(|e| e.into_wpl_err())?;
         let expected = vec![
             DataField::from_chars("y.a".to_string(), "hello".to_string()),
             DataField::from_chars("x.b".to_string(), "18".to_string()),
@@ -325,7 +337,9 @@ mod tests {
         let data = r#""主机172.16.12.20存在可疑进程参数问题，进程fscan_amd64的启动参数为./fscan_amd64 -h 172.16.12.0/24，符合可疑进程参数的特性。" event_content="主机172.16.12.20存在可疑进程参数问题，进程fscan_amd64的启动参数为./fscan_amd64 -h 172.16.12.0/24，符合可疑进程参数的特性。"
 "#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
+        let (tdc, _) = pipe
+            .proc(0, RawData::from_string(data.to_string()), 0)
+            .map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         assert_eq!(
             tdc.get_field_owned("content"),
@@ -352,7 +366,9 @@ mod tests {
         //let rule = r#" rule x {(chars:a, kv,  json) } "#;
         let data = r#"sddD:\招标项目\6-MSS\mss日志映射表 b="sddD:\招标项目\6-MSS\mss日志映射表" {"c":"sddD:\\招标项目\\6-MSS\\mss日志映射表"}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
+        let (tdc, _) = pipe
+            .proc(0, RawData::from_string(data.to_string()), 0)
+            .map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         assert_eq!(
             tdc.get_field_owned("b"),
@@ -376,7 +392,9 @@ mod tests {
         let rule = r#"rule test { (kv(@protocal(80))) }"#;
         let data = r#"protocal(80)=tcp"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (record, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
+        let (record, _) = pipe
+            .proc(0, RawData::from_string(data.to_string()), 0)
+            .map_err(|e| e.into_wpl_err())?;
         assert_eq!(
             record.field("protocal(80)").map(|s| s.as_field()),
             Some(&DataField::from_chars("protocal(80)", "tcp"))
@@ -389,7 +407,9 @@ mod tests {
         let rule = r#"rule test { (kv,kv,kv)\s }"#;
         let data = r#"arr[0]=true list<int>=100 set{a}=value"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (record, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
+        let (record, _) = pipe
+            .proc(0, RawData::from_string(data.to_string()), 0)
+            .map_err(|e| e.into_wpl_err())?;
 
         assert_eq!(
             record.field("arr[0]").map(|s| s.as_field()),
@@ -412,10 +432,14 @@ mod tests {
         let data = r#"x.a="hello"!|x.b=18!|x.c=20"#;
         let pipe = WplEvaluator::from_code(rule)?;
 
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
+        let (tdc, _) = pipe
+            .proc(0, RawData::from_string(data.to_string()), 0)
+            .map_err(|e| e.into_wpl_err())?;
         asert_kv_x_obj(tdc);
         let data = r#"x.a="hello"!|x.b=18!|x.c1=20"#;
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
+        let (tdc, _) = pipe
+            .proc(0, RawData::from_string(data.to_string()), 0)
+            .map_err(|e| e.into_wpl_err())?;
         asert_kv_x_obj(tdc);
         Ok(())
     }

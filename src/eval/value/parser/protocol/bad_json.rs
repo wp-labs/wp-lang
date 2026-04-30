@@ -62,7 +62,9 @@ mod tests {
     fn evaluator_supports_bad_json_alias() -> WplCodeResult<()> {
         let rule = r#"rule test { (bad_json:raw) }"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, rest) = pipe.proc(0, UNKNOWN_JSON_SAMPLE, 0).map_err(|e| e.into_wpl_err())?;
+        let (tdc, rest) = pipe
+            .proc(0, UNKNOWN_JSON_SAMPLE, 0)
+            .map_err(|e| e.into_wpl_err())?;
         assert_eq!(rest, "");
         assert_eq!(
             tdc.field("raw").map(|f| f.as_field()),
@@ -75,7 +77,9 @@ mod tests {
     fn json_like_and_bad_json_work_together_end_to_end() -> WplCodeResult<()> {
         let rule = r#"rule test { |json_like| (bad_json:raw) }"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, rest) = pipe.proc(0, UNKNOWN_JSON_SAMPLE, 0).map_err(|e| e.into_wpl_err())?;
+        let (tdc, rest) = pipe
+            .proc(0, UNKNOWN_JSON_SAMPLE, 0)
+            .map_err(|e| e.into_wpl_err())?;
         assert_eq!(rest, "");
         assert_eq!(
             tdc.field("raw").map(|f| f.as_field()),

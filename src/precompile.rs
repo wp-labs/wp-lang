@@ -55,7 +55,8 @@ pub fn compile_rule(
                     let f_conf_cloned = f_conf.clone();
                     let sep_cloned = sep.clone();
                     let field_fn: FieldGenFn = Box::new(move |ch: &mut GenChannel| {
-                        let meta = DataType::from(f_conf_cloned.meta_name.as_str()).map_err(|e| e.into_wpl_err())?;
+                        let meta = DataType::from(f_conf_cloned.meta_name.as_str())
+                            .map_err(|e| e.into_wpl_err())?;
                         let parser = ParserFactory::create(&meta)?;
                         let f = parser.generate(ch, &sep_cloned, &f_conf_cloned, gconf.as_ref())?;
                         Ok(f)

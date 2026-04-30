@@ -1,5 +1,5 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use orion_error::TestAssert;
+use orion_error::testcase::TestAssert;
 use std::fmt::Write;
 use wp_model_core::raw::RawData;
 use wp_parse_api::PipeProcessor;

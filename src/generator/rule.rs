@@ -19,8 +19,12 @@ impl FieldsGenRule {
         let mut ctx = OperationContext::doing("load gen rule");
         ctx.record("path", path);
 
-        let content = std::fs::read_to_string(path).owe(WplCodeReason::from_conf()).with_context(&ctx)?;
-        let res: Self = toml::from_str(&content).owe(WplCodeReason::from_conf()).with_context(&ctx)?;
+        let content = std::fs::read_to_string(path)
+            .owe(WplCodeReason::from_conf())
+            .with_context(&ctx)?;
+        let res: Self = toml::from_str(&content)
+            .owe(WplCodeReason::from_conf())
+            .with_context(&ctx)?;
         Ok(res)
     }
     pub fn new() -> Self {

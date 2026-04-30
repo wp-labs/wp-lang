@@ -147,9 +147,9 @@ mod tests {
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::eval::value::parser::ParserFactory;
     use crate::generator::{FmtFieldVec, GenChannel};
-    use crate::parser::parse_code::wpl_express;
-    use crate::parser::error::WplCodeResult;
     use crate::parser::error::IntoWplCodeError;
+    use crate::parser::error::WplCodeResult;
+    use crate::parser::parse_code::wpl_express;
     use wp_model_core::model::DataType;
     use wp_model_core::model::Value;
 
@@ -219,7 +219,8 @@ mod tests {
         for group in &rule.group {
             for f_conf in &group.fields {
                 let mut ch = GenChannel::new();
-                let meta = DataType::from(f_conf.meta_name.as_str()).map_err(|e| e.into_wpl_err())?;
+                let meta =
+                    DataType::from(f_conf.meta_name.as_str()).map_err(|e| e.into_wpl_err())?;
                 let parser = ParserFactory::create(&meta)?;
                 let field = parser.generate(&mut ch, &sep, f_conf, None)?;
                 fieldset.push(field);

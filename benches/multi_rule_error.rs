@@ -86,9 +86,8 @@ fn bench_proc_ref_path(c: &mut Criterion) {
 fn bench_partial_match(c: &mut Criterion) {
     let rule_counts = [5, 10, 20, 30];
     // chars 匹配文本前缀，digit 必然失败
-    let payload = RawData::from_string(
-        "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda",
-    );
+    let payload =
+        RawData::from_string("alpha beta gamma delta epsilon zeta eta theta iota kappa lambda");
 
     let fail_types = ["digit", "ip", "time", "float"];
 

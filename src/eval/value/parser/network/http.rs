@@ -222,8 +222,8 @@ impl PatternParser for AgentP {
 mod tests {
     use crate::ast::fld_fmt::for_test::fdc2;
     use crate::eval::value::test_utils::{ParserTUnit, ParserTestEnv, verify_gen_parse};
-    use crate::parser::error::WplCodeResult;
     use crate::parser::error::IntoWplCodeError;
+    use crate::parser::error::WplCodeResult;
     use orion_error::testcase::TestAssert;
 
     use super::*;

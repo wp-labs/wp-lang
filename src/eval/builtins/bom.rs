@@ -308,17 +308,23 @@ mod tests {
 
         // String -> String
         let str_data = RawData::from_string("\u{FEFF}test".to_string());
-        let str_result = BomClearProc.process(str_data).map_err(|e| e.into_wpl_err())?;
+        let str_result = BomClearProc
+            .process(str_data)
+            .map_err(|e| e.into_wpl_err())?;
         assert!(matches!(str_result, RawData::String(_)));
 
         // Bytes -> Bytes
         let bytes_data = RawData::Bytes(Bytes::from_static(&[0xEF, 0xBB, 0xBF, b't']));
-        let bytes_result = BomClearProc.process(bytes_data).map_err(|e| e.into_wpl_err())?;
+        let bytes_result = BomClearProc
+            .process(bytes_data)
+            .map_err(|e| e.into_wpl_err())?;
         assert!(matches!(bytes_result, RawData::Bytes(_)));
 
         // ArcBytes -> ArcBytes
         let arc_data = RawData::ArcBytes(Arc::new(vec![0xEF, 0xBB, 0xBF, b't']));
-        let arc_result = BomClearProc.process(arc_data).map_err(|e| e.into_wpl_err())?;
+        let arc_result = BomClearProc
+            .process(arc_data)
+            .map_err(|e| e.into_wpl_err())?;
         assert!(matches!(arc_result, RawData::ArcBytes(_)));
 
         Ok(())

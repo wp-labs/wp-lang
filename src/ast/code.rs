@@ -9,10 +9,10 @@ use crate::parser::wpl_pkg::wpl_package;
 use crate::parser::wpl_rule::wpl_rule;
 use crate::winnow::Parser;
 use derive_getters::Getters;
+use orion_error::ErrorWith;
 use orion_error::UvsFrom;
 use orion_error::compat_traits::ErrorOweBase;
 use orion_error::conversion::ToStructError;
-use orion_error::ErrorWith;
 use wp_primitives::comment::CommentParser;
 
 #[derive(Debug, Clone, Getters)]

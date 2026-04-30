@@ -4,8 +4,8 @@ mod test {
 
     use wp_primitives::Parser;
 
-    use crate::parser::error::WplCodeResult;
     use crate::parser::error::IntoWplCodeError;
+    use crate::parser::error::WplCodeResult;
 
     use crate::parser::wpl_rule::wpl_rule;
 
@@ -27,7 +27,8 @@ mod test {
             for field in &group.fields {
                 let rule = field.name.clone().and_then(|name| rules.get(name.as_str()));
                 let mut ch = GenChannel::new();
-                let meta = DataType::from(field.meta_name.as_str()).map_err(|e| e.into_wpl_err())?;
+                let meta =
+                    DataType::from(field.meta_name.as_str()).map_err(|e| e.into_wpl_err())?;
                 let parser = ParserFactory::create(&meta)?;
                 let field = parser.generate(&mut ch, ups_sep, field, rule)?;
                 fieldset.push(field);

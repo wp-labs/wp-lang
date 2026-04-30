@@ -1,7 +1,7 @@
 use crate::ast::AnnFun;
 use crate::{WparseError, WparseReason};
-use orion_error::conversion::ToStructError;
 use orion_error::UvsFrom;
+use orion_error::conversion::ToStructError;
 use smol_str::SmolStr;
 use std::collections::BTreeMap;
 use wp_connector_api::SourceEvent;

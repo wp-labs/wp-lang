@@ -114,8 +114,8 @@ mod tests {
     use crate::eval::value::test_utils::ParserTUnit;
 
     use super::*;
-    use crate::parser::error::WplCodeResult;
     use crate::parser::error::IntoWplCodeError;
+    use crate::parser::error::WplCodeResult;
     use orion_error::testcase::TestAssert;
 
     #[test]
