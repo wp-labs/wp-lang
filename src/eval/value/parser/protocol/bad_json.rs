@@ -129,7 +129,7 @@ mod tests {
     }
 
     #[test]
-    fn json_like_and_bad_json_reject_valid_json_end_to_end() -> AnyResult<()> {
+    fn json_like_and_bad_json_reject_valid_json_end_to_end() -> WplCodeResult<()> {
         let rule = r#"rule test { |json_like| (bad_json:raw) }"#;
         let pipe = WplEvaluator::from_code(rule)?;
         assert!(pipe.proc(0, r#"{"host":"ok","method":"POST"}"#, 0).is_err());

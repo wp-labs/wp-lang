@@ -606,7 +606,7 @@ mod tests {
     }
 
     #[test]
-    fn test_json_take_then_group_pipe_uses_selected_field() -> AnyResult<()> {
+    fn test_json_take_then_group_pipe_uses_selected_field() -> WplCodeResult<()> {
         let rule = r#"rule ops {
             (
                 json(chars@log)
@@ -621,7 +621,7 @@ mod tests {
         }"#;
         let data = r#"{"date":1775125000.51395,"log":"[2026-04-02 18:16:40.513][vaultwarden::api::notifications][INFO] Closing WS connection from 220.181.41.82\n","time":"2026-04-02T10:16:40.513816575Z","container_name":"vaultwarden","filename":"/host/var/lib/docker/containers/8ec1e73e0108526423dcd459ca7c6356d544742d0dcb75199eec3f1f6a8c9ea0/8ec1e73e0108526423dcd459ca7c6356d544742d0dcb75199eec3f1f6a8c9ea0-json.log","app_name":"vaultwarden","host_name":"93208eeb93ec"}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, rest) = pipe.proc(0, data, 0)?;
+        let (tdc, rest) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
 
         assert_eq!(rest, "");
         assert!(matches!(

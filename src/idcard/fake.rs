@@ -166,7 +166,7 @@ pub fn rand_with(options: &FakeOptions) -> Result<String, Error> {
 
     let days = rng.random_range(1..365);
     let dt = Local.with_ymd_and_hms(now.year(), 1, 1, 0, 0, 0).unwrap();
-    let birth = dt - Duration::days((age * 365 - days) as i64);
+    let birth = dt - Duration::days(age as i64 * 365 - days as i64);
     let gender = if let Some(value) = &options.gender {
         match value {
             Gender::Male => Gender::Male,
