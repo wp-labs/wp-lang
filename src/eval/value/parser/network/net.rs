@@ -43,7 +43,7 @@ impl PatternParser for IpPSR {
         gnc: &mut GenChannel,
         f_conf: &WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         let range = if let Some(Some(GenScopeEnum::Ip(conf))) = g_conf.map(|c| &c.scope) {
             let beg: u32 = conf.beg.into();
             let end: u32 = conf.end.into();
@@ -107,7 +107,7 @@ impl PatternParser for IpNetP {
         _gen: &mut GenChannel,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         unimplemented!("ip_net gen");
     }
 }
@@ -122,8 +122,8 @@ mod tests {
     use crate::eval::value::parser::base::digit::DigitP;
     use crate::eval::value::parser::network::net::{IpNetP, IpPSR, ip};
     use crate::eval::value::test_utils::{ParserTUnit, verify_parse_v_suc_end};
-    use crate::types::AnyResult;
-    use orion_error::TestAssert;
+    use crate::parser::error::WplCodeResult;
+    use orion_error::testcase::TestAssert;
     use wp_model_core::model::{DataField, IpNetValue};
 
     #[test]
@@ -137,7 +137,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ip_partial() -> AnyResult<()> {
+    fn test_ip_partial() -> WplCodeResult<()> {
         assert_eq!(
             ip.parse_peek("172.0.0.9"),
             Ok(("", "172.0.0.9".parse().assert()))
@@ -205,7 +205,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ip() -> AnyResult<()> {
+    fn test_ip() -> WplCodeResult<()> {
         let conf_ip = WplField::try_parse("ip").assert();
         let mut data = "192.168.1.2";
         let x = ParserTUnit::new(IpPSR::default(), conf_ip.clone())
@@ -235,7 +235,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ip_gen() -> AnyResult<()> {
+    fn test_ip_gen() -> WplCodeResult<()> {
         let conf_ip = WplField::try_parse("ip").assert();
         ParserTUnit::new(IpPSR::default(), conf_ip).verify_gen_parse_suc();
 

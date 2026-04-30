@@ -2,7 +2,7 @@ use super::super::prelude::*;
 use crate::generator::FieldGenConf;
 use crate::generator::{GenChannel, ParserValue};
 use crate::parser::utils::{quot_r_str, quot_str, take_to_end, window_path};
-use crate::types::AnyResult;
+use crate::parser::error::WplCodeResult;
 use wp_model_core::model::DataField;
 use wp_model_core::model::DataType;
 use wp_model_core::model::FNameStr;
@@ -55,7 +55,7 @@ impl PatternParser for BoolP {
         _gen: &mut GenChannel,
         f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         Ok(DataField::from_bool(f_conf.safe_name(), false))
     }
 }
@@ -74,13 +74,13 @@ mod tests {
     use crate::eval::value::parser::base::CharsP;
     use crate::eval::value::parser::protocol::json::JsonP;
     use crate::eval::value::test_utils::ParserTUnit;
-    use crate::types::AnyResult;
-    use orion_error::TestAssert;
+    use crate::parser::error::WplCodeResult;
+    use orion_error::testcase::TestAssert;
 
     use super::*;
 
     #[test]
-    fn test_bool() -> AnyResult<()> {
+    fn test_bool() -> WplCodeResult<()> {
         let mut data = "true";
         let conf = WplField::try_parse("bool").assert();
         let field = ParserTUnit::new(BoolP::default(), conf.clone())

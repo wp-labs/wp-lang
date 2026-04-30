@@ -219,10 +219,10 @@ impl Display for WplFieldSet {
 #[cfg(test)]
 mod tests {
     use crate::ast::{WplField, WplFieldSet};
-    use crate::types::AnyResult;
+    use crate::parser::error::WplCodeResult;
 
     #[test]
-    fn test_get_conf() -> AnyResult<()> {
+    fn test_get_conf() -> WplCodeResult<()> {
         let mut confs = WplFieldSet::default();
         confs.add("a", WplField::name_default("1"));
         confs.add("b", WplField::name_default("2"));

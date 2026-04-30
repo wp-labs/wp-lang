@@ -2,6 +2,7 @@ use thiserror::Error;
 
 use crate::ast::WplField;
 use crate::compat::{OptionConv, OptionError};
+use crate::parser::error::{IntoWplCodeError, WplCodeError, WplCodeReason};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum FieldError {
@@ -11,6 +12,12 @@ pub enum FieldError {
     LessConf(String),
     #[error("field is empty ")]
     Empty,
+}
+
+impl IntoWplCodeError for FieldError {
+    fn into_wpl_err(self) -> WplCodeError {
+        WplCodeReason::Plugin(self.to_string()).into()
+    }
 }
 
 impl OptionError for FieldError {

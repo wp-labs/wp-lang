@@ -2,7 +2,7 @@ pub use crate::ast::{WplField, WplSep};
 pub use crate::eval::value::parse_def::PatternParser;
 pub use crate::generator::FieldGenConf;
 pub use crate::generator::GenChannel;
-pub use crate::types::AnyResult;
+pub use crate::parser::error::WplCodeResult;
 pub use winnow::ascii::alphanumeric1;
 pub use winnow::ascii::multispace0;
 pub use winnow::combinator::fail;

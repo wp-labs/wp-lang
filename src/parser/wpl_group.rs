@@ -55,7 +55,7 @@ pub fn wpl_group(input: &mut &str) -> WResult<WplGroup> {
 #[cfg(test)]
 mod tests {
 
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
 
     use crate::parser::wpl_field::wpl_pipe;
 

@@ -351,7 +351,7 @@ fn parse_peek_symbol(input: &mut &str, conf: &mut WplField) -> ModalResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
 
     #[test]
     fn test_separator() {

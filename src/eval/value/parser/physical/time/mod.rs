@@ -16,7 +16,7 @@ pub fn gen_time(
     gnc: &mut crate::generator::GenChannel,
     f_conf: &crate::ast::WplField,
     g_conf: Option<&crate::generator::FieldGenConf>,
-) -> crate::types::AnyResult<DataField> {
+) -> crate::parser::error::WplCodeResult<DataField> {
     use chrono::TimeZone; // bring with_ymd_and_hms into scope
     use rand::RngExt as _;
     let y = gnc.rng.random_range(2020..2023);

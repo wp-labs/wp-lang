@@ -58,15 +58,15 @@ pub fn alt_proc(
 
 #[cfg(test)]
 mod tests {
-    use crate::types::AnyResult;
+    use crate::parser::error::WplCodeResult;
     use crate::{WplEvaluator, wpl_express};
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
     use std::net::{IpAddr, Ipv4Addr};
     use wp_model_core::model::DataField;
     use wp_primitives::Parser;
 
     #[test]
-    fn test_alt_group() -> AnyResult<()> {
+    fn test_alt_group() -> WplCodeResult<()> {
         let express = wpl_express
             .parse(r#"alt(ip:sip,digit:id),(2*_,time<[,]>)"#)
             .assert();

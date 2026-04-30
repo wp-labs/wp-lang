@@ -6,7 +6,7 @@ use crate::eval::runtime::field::FieldEvalUnit;
 use crate::eval::value::parse_def::PatternParser;
 use crate::generator::FieldGenConf;
 use crate::generator::GenChannel;
-use crate::types::AnyResult;
+use crate::parser::error::WplCodeResult;
 use winnow::ascii::multispace0;
 use winnow::{ModalResult, Parser};
 use wp_model_core::model::DataField;
@@ -47,7 +47,7 @@ impl PatternParser for SymbolP {
         _gen: &mut GenChannel,
         f_conf: &WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         let name = "".to_string();
         //let _ = self.base().field_conf.length;
 
@@ -103,7 +103,7 @@ impl PatternParser for PeekSymbolP {
         _gen: &mut GenChannel,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         unimplemented!("peek_symbol not gen data")
     }
 }
@@ -114,20 +114,21 @@ mod tests {
     use crate::eval::value::test_utils::ParserTUnit;
 
     use super::*;
-    use crate::types::AnyResult;
-    use orion_error::TestAssert;
+    use crate::parser::error::WplCodeResult;
+    use crate::parser::error::IntoWplCodeError;
+    use orion_error::testcase::TestAssert;
 
     #[test]
-    fn test_symbol() -> AnyResult<()> {
+    fn test_symbol() -> WplCodeResult<()> {
         let mut data = "color=red";
-        let conf = fdc3_1("symbol", "color=red", " ")?;
+        let conf = fdc3_1("symbol", "color=red", " ").map_err(|e| e.into_wpl_err())?;
         let res = ParserTUnit::new(SymbolP::default(), conf.clone())
             .verify_parse_suc(&mut data)
             .assert();
         assert_eq!(res[0], DataField::from_symbol("symbol", "color=red"));
 
         let mut data = "color=black  ";
-        let conf = fdc3_1("symbol", "color=black", " ")?;
+        let conf = fdc3_1("symbol", "color=black", " ").map_err(|e| e.into_wpl_err())?;
         let res = ParserTUnit::new(SymbolP::default(), conf.clone())
             .verify_parse_suc(&mut data)
             .assert();
@@ -137,16 +138,16 @@ mod tests {
     }
 
     #[test]
-    fn test_peek_symbol() -> AnyResult<()> {
+    fn test_peek_symbol() -> WplCodeResult<()> {
         let mut data = "color=red";
-        let conf = fdc3_1("symbol", "color=red", " ")?;
+        let conf = fdc3_1("symbol", "color=red", " ").map_err(|e| e.into_wpl_err())?;
         let res = ParserTUnit::new(PeekSymbolP::default(), conf.clone())
             .verify_parse_suc(&mut data)
             .assert();
         assert_eq!(res[0], DataField::from_symbol("symbol", "color=red"));
 
         let mut data = "color=black  ";
-        let conf = fdc3_1("symbol", "color=black", " ")?;
+        let conf = fdc3_1("symbol", "color=black", " ").map_err(|e| e.into_wpl_err())?;
         let res = ParserTUnit::new(PeekSymbolP::default(), conf.clone())
             .verify_parse_suc(&mut data)
             .assert();
@@ -176,7 +177,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_case() -> AnyResult<()> {
+    fn test_from_case() -> WplCodeResult<()> {
         let mut data = "  color=red hello";
         let conf = WplField::try_parse("symbol(color=red)").assert();
         let res = ParserTUnit::new(SymbolP::default(), conf.clone())
@@ -187,7 +188,7 @@ mod tests {
     }
 
     #[test]
-    fn test_gen() -> AnyResult<()> {
+    fn test_gen() -> WplCodeResult<()> {
         let conf = WplField::try_parse("symbol(color=red)").assert();
         ParserTUnit::new(SymbolP::default(), conf.clone()).verify_gen_parse_suc();
         Ok(())

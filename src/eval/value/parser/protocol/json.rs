@@ -45,7 +45,7 @@ impl PatternParser for JsonP {
         _gen: &mut GenChannel,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         unimplemented!("json generate")
     }
 }
@@ -66,8 +66,8 @@ mod tests {
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::eval::value::test_utils::ParserTUnit;
     use crate::parser::wpl_rule::wpl_rule;
-    use crate::types::AnyResult;
-    use orion_error::TestAssert;
+    use crate::parser::error::WplCodeResult;
+    use orion_error::testcase::TestAssert;
 
     use wp_model_core::model::{DataRecord, DataType};
 
@@ -77,8 +77,9 @@ mod tests {
     static RAW_FMT: Lazy<Raw> = Lazy::new(Raw::new);
     const UNKNOWN_JSON_SAMPLE: &str = include_str!("../../../../../tests/unknow.json");
 
+    use crate::parser::error::IntoWplCodeError;
     #[test]
-    fn test_json_std() -> AnyResult<()> {
+    fn test_json_std() -> WplCodeResult<()> {
         let mut data = r#"{"a":1,"b":2}"#;
         let conf = WplField::try_parse("json").assert();
         ParserTUnit::new(JsonP::default(), conf.clone())
@@ -95,12 +96,12 @@ mod tests {
     }
 
     #[test]
-    fn test_json_base64() -> AnyResult<()> {
+    fn test_json_base64() -> WplCodeResult<()> {
         let conf = wpl_rule
             .parse("rule test {(json(base64@a:_a, _@c))}")
             .assert();
 
-        let f_conf = conf.statement.first_field().no_less("first field")?;
+        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
         let mut data = r#"{"a":"aGVsbG8=","b":2,"c": "gogogo"}"#;
         let mut out = Vec::new();
         let ups_sep = WplSep::default();
@@ -111,7 +112,7 @@ mod tests {
     }
 
     #[test]
-    fn test_json_long() -> AnyResult<()> {
+    fn test_json_long() -> WplCodeResult<()> {
         let mut data = r#"{"_origin": {"rsp_status": 200, "sip": "10.180.17.50", "public_date": "2023-02-08 17:11:04", "vuln_name": "疑似访问/下载脚本文件", "detail_info": "发现疑似脚本文件下载行为，该类文件可直接在操作系统上执行，可能存在风险。", "solution": "确认该文件访问/下载行为是否为合规行为；如下载成功，检查所下载文件是否为恶意文件；如是，及时删除该文件并检查其是否被执行，杀死异常进程。", "uri": "/download/distribution/1_20230515/6461b42f12f17.bat", "xff": "", "vuln_harm": "该类文件可直接在操作系统上执行，若下载的是恶意脚本，可能存在较高风险。", "vuln_type": "文件下载", "vuln_desc": "发现疑似脚本文件下载行为，该类文件可直接在操作系统上执行，可能存在风险。", "write_date": 1684127059, "dport": 80, "code_language": "", "sport": 62551, "dip": "10.111.48.17", "site_app": ""}, "alarm_sample": 1, "alarm_sip": "10.180.17.50", "alarm_source": 1, "attack_chain": "0x02050000", "attack_org": "", "attack_sip": "10.111.48.17", "attack_type": "文件下载", "branch_id": "QtAVdJgqi", "file_name": "6461b42f12f17.bat", "first_access_time": "2023-05-15T13:04:19.000+0800", "hazard_level": 4, "hazard_rating": "中危", "host_state": "攻击成功", "ioc": "268572087-疑似访问/下载脚本文件", "is_delete": 0, "is_web_attack": "1", "is_white": 0, "nid": "", "repeat_count": 1, "rule_desc": "网页漏洞利用", "rule_key": "webids", "rule_state": "green", "sip_ioc_dip": "7873ecac0a91ce2b9f96b9f955e82065", "skyeye_id": "", "skyeye_index": "", "skyeye_type": "webids-webattack_dolog", "super_attack_chain": "0x02000000", "super_type": "攻击利用", "type": "文件下载", "type_chain": "16120000", "update_time": 1684127441, "vuln_type": "疑似访问/下载脚本文件", "white_id": null, "x_forwarded_for": "", "rule_labels": "{\"0x110A02\": {\"parent_name\": \"资产识别\", \"name\": \"UA指纹识别\", \"os\": \"Windows/XP\", \"parent_id\": \"0x110A00\", \"role\": \"C\", \"software\": \"IE/6.0\", \"type\": \"模块名称\", \"hw_type\": \"PC\"}}", "att_ck": "初始访问:TA0001|利用面向公众的应用程序:T1190", "serial_num": "QbJK/tb6A", "access_time": "2023-05-15T13:04:19.000+0800", "file_md5": "64f9bfa67c0b89fdb82b0673c1a96964", "host": "10.111.48.17", "rule_id": "0x100215b7", "rsp_status": "200", "skyeye_serial_num": "QbJK/tb6A", "host_md5": "6470cf2c183004f8ead3e150277b4d01", "alarm_id": "20230515_d3b0cca9ea8e9cca348f08ee036103dc", "payload": {"req_header": "R0VUIC9kb3dubG9hZC9kaXN0cmlidXRpb24vMV8yMDIzMDUxNS82NDYxYjQyZjEyZjE3LmJhdCBIVFRQLzEuMQ0KQWNjZXB0OiAqLyoNClVzZXItQWdlbnQ6IE1vemlsbGEvNC4wIChjb21wYXRpYmxlOyBNU0lFIDYuMDsgV2luZG93cyBOVCA1LjE7IFNWMSkNCkhvc3Q6IDEwLjExMS40OC4xNw0KQ29ubmVjdGlvbjogQ2xvc2UNCkNhY2hlLUNvbnRyb2w6IG5vLWNhY2hlDQoNCg==", "rsp_header": "SFRUUC8xLjEgMjAwIE9LDQpEYXRlOiBNb24sIDE1IE1heSAyMDIzIDA1OjExOjE2IEdNVA0KQ29udGVudC1UeXBlOiBhcHBsaWNhdGlvbi9vY3RldC1zdHJlYW0NCkNvbnRlbnQtTGVuZ3RoOiAzNDANCkNvbm5lY3Rpb246IGNsb3NlDQpMYXN0LU1vZGlmaWVkOiBNb24sIDE1IE1heSAyMDIzIDA0OjI1OjE5IEdNVA0KRVRhZzogIjY0NjFiNDJmLTE1NCINClNlcnZlcjogUWlBblhpbiB3ZWIgc2VydmVyDQpBY2NlcHQtUmFuZ2VzOiBieXRlcw0KDQo=", "rsp_body": "QGVjaG8gb2ZmDQpyZW0g6I635Y+W5qGM6Z2i6Lev5b6EDQpzZXQgZGVzayA9IiINCkZvciAvRiAlJWkgaW4gKCdwb3dlcnNoZWxsIC1jb20gIltlbnZpcm9ubWVudF06OmdldGZvbGRlcnBhdGgoW2Vudmlyb25tZW50K3NwZWNpYWxmb2xkZXJdOjpkZXNrdG9wKSInKSBkbyAoc2V0IGRlc2s9JSVpKQ0KZWNobyAlZGVzayUNCmRlbCAiJWRlc2slXOaWsOWNj+WQjOWKnuWFrOS4k+eUqC5sbmsiDQpTZXQgU2hlbGw9V1NjcmlwdC5DcmVhdGVPYmplY3QoIldTY3JpcHQuU2hlbGwiKSANCldTY3JpcHQuU2xlZXAgMTAwMA0KU2hlbGwuU2VuZEtleXMgIntGNX0iDQppZTR1aW5pdC5leGUgLUNsZWFySWNvbkNhY2hlDQpkZWwgJTA=", "req_body": ""}, "proto": "http", "sip": "10.180.17.50", "dip": "10.111.48.17", "src_mac": "00:15:c7:f5:90:00", "dst_mac": "00:21:a0:0c:cc:40", "vlan_id": "", "sport": 62551, "dport": 80, "asset_group": "未分配资产组", "dip_group": "未分配资产组", "sip_group": "未分配资产组", "sip_addr": "局域网", "dip_addr": "局域网", "confidence": "高"}"#;
         let conf = WplField::try_parse("json").assert();
         let obj = ParserTUnit::new(JsonP::default(), conf.clone())
@@ -129,7 +130,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unknown_json_fixture_fails_when_sample_is_not_valid_json() -> AnyResult<()> {
+    fn test_unknown_json_fixture_fails_when_sample_is_not_valid_json() -> WplCodeResult<()> {
         let rule = r#"rule test { (json) }"#;
         let pipe = WplEvaluator::from_code(rule)?;
         assert!(
@@ -140,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn test_json_preserves_garbled_unicode_when_json_is_valid() -> AnyResult<()> {
+    fn test_json_preserves_garbled_unicode_when_json_is_valid() -> WplCodeResult<()> {
         let rule =
             r#"rule test { (json(chars@host, chars@method, chars@req_body, chars@rsp_body)) }"#;
         let data = r#"{
@@ -150,7 +151,7 @@ mod tests {
             "rsp_body": "孇駓Jw˾iVgdɜQ倝A݆c"
         }"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
 
         let expected_host = DataField::from_chars("host", "qup.f.360.cn");
         assert_eq!(
@@ -183,11 +184,11 @@ mod tests {
     }
 
     #[test]
-    fn test_json_works_without_explicit_json_like_pipe() -> AnyResult<()> {
+    fn test_json_works_without_explicit_json_like_pipe() -> WplCodeResult<()> {
         let rule = r#"rule test { (json(chars@host, chars@method)) }"#;
         let data = r#"{"host":"qup.f.360.cn","method":"POST"}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, rest) = pipe.proc(0, data, 0)?;
+        let (tdc, rest) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         assert_eq!(rest, "");
         assert_eq!(
             tdc.field("host").map(|s| s.as_field()),
@@ -201,7 +202,7 @@ mod tests {
     }
 
     #[test]
-    fn test_json_rejects_plain_text_without_explicit_json_like_pipe() -> AnyResult<()> {
+    fn test_json_rejects_plain_text_without_explicit_json_like_pipe() -> WplCodeResult<()> {
         let rule = r#"rule test { (json(chars@host, chars@method)) }"#;
         let pipe = WplEvaluator::from_code(rule)?;
         assert!(pipe.proc(0, "plain text log line", 0).is_err());
@@ -209,7 +210,7 @@ mod tests {
     }
 
     #[test]
-    fn test_json_still_rejects_broken_json_like_input() -> AnyResult<()> {
+    fn test_json_still_rejects_broken_json_like_input() -> WplCodeResult<()> {
         let rule = r#"rule test { (json(chars@host, chars@method)) }"#;
         let pipe = WplEvaluator::from_code(rule)?;
         assert!(pipe.proc(0, UNKNOWN_JSON_SAMPLE, 0).is_err());
@@ -217,7 +218,7 @@ mod tests {
     }
 
     #[test]
-    fn test_json_rename() -> AnyResult<()> {
+    fn test_json_rename() -> WplCodeResult<()> {
         //let mut data = r#"{"_origin": {"rsp_status": 200, "sip": "10.180.17.50", "public_date": "2023-02-08 17:11:04", "vuln_name": "疑似访问/下载脚本文件", "detail_info": "发现疑似脚本文件下载行为，该类文件可直接在操作系统上执行，可能存在风险。", "solution": "确认该文件访问/下载行为是否为合规行为；如下载成功，检查所下载文件是否为恶意文件；如是，及时删除该文件并检查其是否被执行，杀死异常进程。", "uri": "/download/distribution/1_20230515/6461b42f12f17.bat", "xff": "", "vuln_harm": "该类文件可直接在操作系统上执行，若下载的是恶意脚本，可能存在较高风险。", "vuln_type": "文件下载", "vuln_desc": "发现疑似脚本文件下载行为，该类文件可直接在操作系统上执行，可能存在风险。", "write_date": 1684127059, "dport": 80, "code_language": "", "sport": 62551, "dip": "10.111.48.17", "site_app": ""}, "alarm_sample": 1, "alarm_sip": "10.180.17.50", "alarm_source": 1, "attack_chain": "0x02050000", "attack_org": "", "attack_sip": "10.111.48.17", "attack_type": "文件下载", "branch_id": "QtAVdJgqi", "file_name": "6461b42f12f17.bat", "first_access_time": "2023-05-15T13:04:19.000+0800", "hazard_level": 4, "hazard_rating": "中危", "host_state": "攻击成功", "ioc": "268572087-疑似访问/下载脚本文件", "is_delete": 0, "is_web_attack": "1", "is_white": 0, "nid": "", "repeat_count": 1, "rule_desc": "网页漏洞利用", "rule_key": "webids", "rule_state": "green", "sip_ioc_dip": "7873ecac0a91ce2b9f96b9f955e82065", "skyeye_id": "", "skyeye_index": "", "skyeye_type": "webids-webattack_dolog", "super_attack_chain": "0x02000000", "super_type": "攻击利用", "type": "文件下载", "type_chain": "16120000", "update_time": 1684127441, "vuln_type": "疑似访问/下载脚本文件", "white_id": null, "x_forwarded_for": "", "rule_labels": "{\"0x110A02\": {\"parent_name\": \"资产识别\", \"name\": \"UA指纹识别\", \"os\": \"Windows/XP\", \"parent_id\": \"0x110A00\", \"role\": \"C\", \"software\": \"IE/6.0\", \"type\": \"模块名称\", \"hw_type\": \"PC\"}}", "att_ck": "初始访问:TA0001|利用面向公众的应用程序:T1190", "serial_num": "QbJK/tb6A", "access_time": "2023-05-15T13:04:19.000+0800", "file_md5": "64f9bfa67c0b89fdb82b0673c1a96964", "host": "10.111.48.17", "rule_id": "0x100215b7", "rsp_status": "200", "skyeye_serial_num": "QbJK/tb6A", "host_md5": "6470cf2c183004f8ead3e150277b4d01", "alarm_id": "20230515_d3b0cca9ea8e9cca348f08ee036103dc", "payload": {"req_header": "R0VUIC9kb3dubG9hZC9kaXN0cmlidXRpb24vMV8yMDIzMDUxNS82NDYxYjQyZjEyZjE3LmJhdCBIVFRQLzEuMQ0KQWNjZXB0OiAqLyoNClVzZXItQWdlbnQ6IE1vemlsbGEvNC4wIChjb21wYXRpYmxlOyBNU0lFIDYuMDsgV2luZG93cyBOVCA1LjE7IFNWMSkNCkhvc3Q6IDEwLjExMS40OC4xNw0KQ29ubmVjdGlvbjogQ2xvc2UNCkNhY2hlLUNvbnRyb2w6IG5vLWNhY2hlDQoNCg==", "rsp_header": "SFRUUC8xLjEgMjAwIE9LDQpEYXRlOiBNb24sIDE1IE1heSAyMDIzIDA1OjExOjE2IEdNVA0KQ29udGVudC1UeXBlOiBhcHBsaWNhdGlvbi9vY3RldC1zdHJlYW0NCkNvbnRlbnQtTGVuZ3RoOiAzNDANCkNvbm5lY3Rpb246IGNsb3NlDQpMYXN0LU1vZGlmaWVkOiBNb24sIDE1IE1heSAyMDIzIDA0OjI1OjE5IEdNVA0KRVRhZzogIjY0NjFiNDJmLTE1NCINClNlcnZlcjogUWlBblhpbiB3ZWIgc2VydmVyDQpBY2NlcHQtUmFuZ2VzOiBieXRlcw0KDQo=", "rsp_body": "QGVjaG8gb2ZmDQpyZW0g6I635Y+W5qGM6Z2i6Lev5b6EDQpzZXQgZGVzayA9IiINCkZvciAvRiAlJWkgaW4gKCdwb3dlcnNoZWxsIC1jb20gIltlbnZpcm9ubWVudF06OmdldGZvbGRlcnBhdGgoW2Vudmlyb25tZW50K3NwZWNpYWxmb2xkZXJdOjpkZXNrdG9wKSInKSBkbyAoc2V0IGRlc2s9JSVpKQ0KZWNobyAlZGVzayUNCmRlbCAiJWRlc2slXOaWsOWNj+WQjOWKnuWFrOS4k+eUqC5sbmsiDQpTZXQgU2hlbGw9V1NjcmlwdC5DcmVhdGVPYmplY3QoIldTY3JpcHQuU2hlbGwiKSANCldTY3JpcHQuU2xlZXAgMTAwMA0KU2hlbGwuU2VuZEtleXMgIntGNX0iDQppZTR1aW5pdC5leGUgLUNsZWFySWNvbkNhY2hlDQpkZWwgJTA=", "req_body": ""}, "proto": "http", "sip": "10.180.17.50", "dip": "10.111.48.17", "src_mac": "00:15:c7:f5:90:00", "dst_mac": "00:21:a0:0c:cc:40", "vlan_id": "", "sport": 62551, "dport": 80, "asset_group": "未分配资产组", "dip_group": "未分配资产组", "sip_group": "未分配资产组", "sip_addr": "局域网", "dip_addr": "局域网", "confidence": "高"}"#;
         let mut data =
             r#"{"_origin": {"rsp_status": 200, "sip": "10.180.17.50" } ,"rsp_status": "200" }"#;
@@ -238,11 +239,11 @@ mod tests {
     }
 
     #[test]
-    fn test_json_tianyan() -> AnyResult<()> {
+    fn test_json_tianyan() -> WplCodeResult<()> {
         let conf = wpl_rule
             .parse("rule test {(json(_@_origin*,_@payload/packet_data))}")
             .assert();
-        let f_conf = conf.statement.first_field().no_less("first field")?;
+        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
         let mut data = LONG_DATA;
         let fpu = FieldEvalUnit::from_auto(f_conf.clone());
         let ups_sep = WplSep::default();
@@ -269,9 +270,9 @@ mod tests {
     }
 
     #[test]
-    fn test_json_tianyan2() -> AnyResult<()> {
+    fn test_json_tianyan2() -> WplCodeResult<()> {
         let conf = wpl_rule.parse("rule test {(json(_@*))}").assert();
-        let f_conf = conf.statement.first_field().no_less("first field")?;
+        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
         let mut data = LONG_DATA;
         let fpu = FieldEvalUnit::from_auto(f_conf.clone());
         let ups_sep = WplSep::default();
@@ -289,13 +290,13 @@ mod tests {
     }
 
     #[test]
-    fn test_json_tianyan3() -> AnyResult<()> {
+    fn test_json_tianyan3() -> WplCodeResult<()> {
         let conf = wpl_rule
             .parse(
                 "rule test {(json(_@*,ip@alarm_sip , json@_origin, _@_origin/*,ip@_origin/sip)) }",
             )
             .assert();
-        let f_conf = conf.statement.first_field().no_less("first field")?;
+        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
         let mut data = LONG_DATA;
         let fpu = FieldEvalUnit::from_auto(f_conf.clone());
         let mut out = Vec::new();
@@ -328,11 +329,11 @@ mod tests {
     }
 
     #[test]
-    fn test_json_jt1() -> AnyResult<()> {
+    fn test_json_jt1() -> WplCodeResult<()> {
         let conf = wpl_rule
             .parse(r#"rule test {(json(chars@action/text)\\\0)}"#)
             .assert();
-        let f_conf = conf.statement.first_field().no_less("first field")?;
+        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
         let mut data = JSON_DATA1;
         let fpu = FieldEvalUnit::from_auto(f_conf.clone());
         let mut out = Vec::new();
@@ -352,9 +353,9 @@ mod tests {
     }
 
     #[test]
-    fn test_json_jt2() -> AnyResult<()> {
+    fn test_json_jt2() -> WplCodeResult<()> {
         let conf = wpl_rule.parse(r#"rule test {(json\0)}"#).assert();
-        let f_conf = conf.statement.first_field().no_less("first field")?;
+        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
         let mut data = JSON_DATA2;
         let fpu = FieldEvalUnit::for_test(JsonP::default(), f_conf.clone());
         let mut out = Vec::new();
@@ -372,12 +373,12 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_json_3() -> AnyResult<()> {
+    fn test_json_3() -> WplCodeResult<()> {
         let rule = r#"rule test { (json(digit@value:cpu),json)\, }"#;
         let data =
             r#"{"name": "空闲CPU百分比", "value": 96}, {"name": "空闲内存(kB)", "value": 10243}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("cpu") {
             let expected = DataField::from_digit("cpu", 96);
             assert_eq!(i.as_field(), &expected);
@@ -387,11 +388,11 @@ mod tests {
     //{"value": 96.8}, abc
 
     #[test]
-    fn test_json_4() -> AnyResult<()> {
+    fn test_json_4() -> WplCodeResult<()> {
         let rule = r#"rule test { (json(symbol(CPU)@name,digit@value:cpu),json)\, }"#;
         let data = r#"{"name": "CPU", "value": 96}, {"name": "空闲内存(kB)", "value": 10243}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("cpu") {
             let expected = DataField::from_digit("cpu", 96);
             assert_eq!(i.as_field(), &expected);
@@ -399,11 +400,11 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_json_5() -> AnyResult<()> {
+    fn test_json_5() -> WplCodeResult<()> {
         let rule = r#"rule test { (json(symbol(中国)@name,digit@value:cpu),json)\, }"#;
         let data = r#"{"name": "中国", "value": 96}, {"name": "空闲内存(kB)", "value": 10243}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("cpu") {
             let expected = DataField::from_digit("cpu", 96);
             assert_eq!(i.as_field(), &expected);
@@ -412,11 +413,11 @@ mod tests {
     }
 
     #[test]
-    fn test_json_6() -> AnyResult<()> {
+    fn test_json_6() -> WplCodeResult<()> {
         let rule = r#"rule test { (json)\, }"#;
         let data = r#"{"name": "中国", "value": 96, "key" : ["a","b","c"] }"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("key[0]") {
             println!("{}", i);
             //assert_eq!(*i, TDOEnum::from_digit("cpu", 96));
@@ -427,7 +428,7 @@ mod tests {
     }
 
     #[test]
-    fn test_json_long_keys_no_panic() -> AnyResult<()> {
+    fn test_json_long_keys_no_panic() -> WplCodeResult<()> {
         // 构造超长 key，验证路径拼接不因固定容量溢出而 panic
         let long_key_a = "a".repeat(300);
         let long_key_b = "b".repeat(300);
@@ -441,7 +442,7 @@ mod tests {
     }
 
     #[test]
-    fn test_json_long_parent_with_array_no_panic() -> AnyResult<()> {
+    fn test_json_long_parent_with_array_no_panic() -> WplCodeResult<()> {
         // 父级为超长 key，子级为数组，验证数组元素名构造不 panic
         let long_key = "parent_".to_string() + &"x".repeat(260);
         // 使用较小数组规模，保证测试快速
@@ -458,11 +459,11 @@ mod tests {
     }
 
     #[test]
-    fn test_json_7() -> AnyResult<()> {
+    fn test_json_7() -> WplCodeResult<()> {
         let rule = r#"rule test { (json(time_timestamp@access_time)) }"#;
         let data = r#"{ "access_time": 1652174567000 }"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         if let Some(i) = tdc.field("access_time") {
             assert_eq!(RAW_FMT.format_field(i), "2022-05-10 09:22:47".to_string());
@@ -473,11 +474,11 @@ mod tests {
     }
 
     #[test]
-    fn test_json_logs_unescape_rule() -> AnyResult<()> {
+    fn test_json_logs_unescape_rule() -> WplCodeResult<()> {
         let rule = r#"rule nginx { (json( chars@logs | json_unescape() )) }"#;
         let data = r#"{"age": 10, "logs": "[10]:\"sys\""}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(field) = tdc.field("logs") {
             let expected = DataField::from_chars("logs".to_string(), "[10]:\"sys\"".to_string());
             assert_eq!(field.as_field(), &expected);
@@ -488,12 +489,12 @@ mod tests {
     }
 
     #[test]
-    fn test_json_pipe_auto_last_behavior() -> AnyResult<()> {
+    fn test_json_pipe_auto_last_behavior() -> WplCodeResult<()> {
         // 未显式 take 时，last() 行为仍应作用于末尾字段
         let rule = r#"rule nginx { (json(chars@a, chars@b) | json_unescape()) }"#;
         let data = r#"{"a":"noop","b":"line1\nline2"}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         assert_eq!(
             tdc.field("b").map(|s| s.as_field()),
             Some(&DataField::from_chars(
@@ -515,7 +516,7 @@ mod tests {
     }
 
     #[test]
-    fn test_json_big_integer_downgrade_to_string() -> AnyResult<()> {
+    fn test_json_big_integer_downgrade_to_string() -> WplCodeResult<()> {
         // 大于 i64::MAX 的无符号整数应降级为字符串，避免静默丢失
         let conf = WplField::try_parse("json").assert();
         let data = format!("{{\"big\": {}}}", (i64::MAX as u128 + 1));
@@ -530,7 +531,7 @@ mod tests {
     }
 
     #[test]
-    fn test_json_i64_and_float_preserve() -> AnyResult<()> {
+    fn test_json_i64_and_float_preserve() -> WplCodeResult<()> {
         let conf = WplField::try_parse("json").assert();
         let mut data = r#"{"i": -42, "f": 3.1415}"#;
         let obj = ParserTUnit::new(JsonP::default(), conf)
@@ -550,14 +551,14 @@ mod tests {
     }
 
     #[test]
-    fn test_json_str_mode_decoded_pipe() -> AnyResult<()> {
+    fn test_json_str_mode_decoded_pipe() -> WplCodeResult<()> {
         let mut data = r#"{"path":"c:\\users\\fc\\file","txt":"line1\nline2"}"#;
         let conf = wpl_rule
             .parse(
                 "rule test {(json(chars@path,chars@txt) | take(path) | json_unescape() | take(txt) | json_unescape())}"
             )
             .assert();
-        let f_conf = conf.statement.first_field().no_less("first field")?;
+        let f_conf = conf.statement.first_field().no_less("first field").map_err(|e| e.into_wpl_err())?;
         let fpu = FieldEvalUnit::from_auto(f_conf.clone());
         let ups_sep = WplSep::default();
         let mut out = Vec::new();
@@ -576,11 +577,11 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_json_8() -> AnyResult<()> {
+    fn test_json_8() -> WplCodeResult<()> {
         let rule = r#"rule test { (json) }"#;
         let data = r#"{ "age": 18}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("age") {
             assert_eq!(RAW_FMT.format_field(i), "18".to_string());
         } else {
@@ -589,11 +590,11 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_json_8_1() -> AnyResult<()> {
+    fn test_json_8_1() -> WplCodeResult<()> {
         let rule = r#"rule test { (json | f_has( age ) ) }"#;
         let data = r#"{ "age": 18}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("age") {
             assert_eq!(RAW_FMT.format_field(i), "18".to_string());
         } else {
@@ -607,11 +608,11 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_json_8_2_0() -> AnyResult<()> {
+    fn test_json_8_2_0() -> WplCodeResult<()> {
         let rule = r#"rule test { (json | f_digit_has( age,18 ) ) }"#;
         let data = r#"{  "name": "china","age": 18}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("age") {
             assert_eq!(RAW_FMT.format_field(i), "18".to_string());
         } else {
@@ -625,11 +626,11 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_json_8_2_1() -> AnyResult<()> {
+    fn test_json_8_2_1() -> WplCodeResult<()> {
         let rule = r#"rule test { (json | f_digit_in( age, [18,19] ) ) }"#;
         let data = r#"{  "name": "china","age": 18}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("age") {
             assert_eq!(RAW_FMT.format_field(i), "18".to_string());
         } else {
@@ -643,11 +644,11 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_json_8_3() -> AnyResult<()> {
+    fn test_json_8_3() -> WplCodeResult<()> {
         let rule = r#"rule test { (json | f_chars_has( name,china ) ) }"#;
         let data = r#"{ "name": "china"}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("name") {
             assert_eq!(RAW_FMT.format_field(i), "china".to_string());
         } else {
@@ -666,7 +667,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_json_8_3_1() -> AnyResult<()> {
+    fn test_json_8_3_1() -> WplCodeResult<()> {
         let rule = r#"rule test { (json | f_chars_in( name, [china,japan]) ) }"#;
         let data = r#"{ "name": "china"}"#;
         let pipe = WplEvaluator::from_code(rule)?;
@@ -674,7 +675,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_json_8_4() -> AnyResult<()> {
+    fn test_json_8_4() -> WplCodeResult<()> {
         let rule = r#"rule test { (json | f_chars_not_has(name, chinx) ) }"#;
         let data = r#"{ "name": "china"}"#;
         let pipe = WplEvaluator::from_code(rule)?;
@@ -687,7 +688,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_json_8_5() -> AnyResult<()> {
+    fn test_json_8_5() -> WplCodeResult<()> {
         let rule = r#"rule test { (json(ip@addr) | f_ip_in(addr, [1.1.1.1,2.2.2.2]) ) }"#;
         let data = r#"{ "addr": "1.1.1.1"}"#;
         let pipe = WplEvaluator::from_code(rule)?;
@@ -695,11 +696,11 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_json_9() -> AnyResult<()> {
+    fn test_json_9() -> WplCodeResult<()> {
         let rule = r#"rule test { (json(time_timestamp@found_time:occur_time,@virus_name:alert_name,@virus_type:origin_alert_cat_name,@risk_level:severity,@iplist:terminal_ip,@host_name:terminal_name,@virus_name:malware_name,@file_md5,chars@file_path,@file_size:file_bytes,@state:protect_action,@agent_id,_@*)) }"#;
         let data = r#"{"_id":"6C941E33DDA773F19AEF2F21203863542E053D94","file_md5":"7e5432f32a3b6f25666e0cc9acff00bf","virus_name":"Suspicious.Win32.Save.a","risk_level":0,"create_time":1671693072,"state":"已处理","time":1671695066,"found_time":1671695066,"agent_id":"3358992609","file_path":"c:\\users\\fc\\desktop\\tr-shopbot\\7e5432f32a3b6f25666e0cc9acff00bf","virus_type":"其他病毒","threat_file":"Suspicious.Win32.Save.a","host_name":"DESKTOP-ARRA948","iplist":"10.122.163.99"}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("file_path") {
             let expected = DataField::from_chars(
                 "file_path",
@@ -713,12 +714,12 @@ mod tests {
     }
 
     #[test]
-    fn test_json_11() -> AnyResult<()> {
+    fn test_json_11() -> WplCodeResult<()> {
         let rule = r#"rule test { (json(array/json@details:event_detail)) }"#;
         //let rule = r#"rule test { (json(@details:event_detail)) }"#;
         let data = r#"{"details":[{"relation":1,"alert_id":"94882787-9505-49d4-9024-20DC93AF579B","action_time":1676304603062,"rule_name":"访问 lemonduck 挖矿的通信域名","rule_desc":"进程 powershell.exe 访问 lemonduck 挖矿的通信域名","attck_id":"TA0011.T1071.004","process_mame":"powershell.exe","process_path":"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe","command":"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.EXE -ep bypass -eSQuAGIAZQA="}]}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
 
         println!("{}", tdc);
 
@@ -783,7 +784,7 @@ mod tests {
         let rule = r#"rule test { (json(@details:event_detail)) }"#;
         let data = r#"{"details":[{"relation":1,"alert_id":"94882787-9505-49d4-9024-20DC93AF579B","action_time":1676304603062,"rule_name":"访问 lemonduck 挖矿的通信域名","rule_desc":"进程 powershell.exe 访问 lemonduck 挖矿的通信域名","attck_id":"TA0011.T1071.004","process_mame":"powershell.exe","process_path":"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe","command":"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.EXE -ep bypass -eSQuAGIAZQA="}]}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
 
         let _expected = vec![
             DataField::from_digit("event_detail/relation".to_string(), 1),
@@ -833,21 +834,21 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_json_bug1() -> AnyResult<()> {
+    fn test_json_bug1() -> WplCodeResult<()> {
         let data = r#"{"http_req_header":"GET /?n=%0A&cmd=ipconfig+/all&search=%25xxx%25url%25:%password%}{.exec|{.?cmd.}|timeout=15|out=abc.}{.?n.}{.?n.}RESULT:{.?n.}{.^abc.}===={.?n.} HTTP/1.1\r\nAccept-Encoding: identity\r\nHost: 221.182.184.6:8081\r\nUser-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36\r\nConnection: close\r\n\r\n"}"#;
         let rule = r#"rule test { (json(chars@http_req_header)) }"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         Ok(())
     }
 
     #[test]
-    fn test_json_take_chars() -> AnyResult<()> {
+    fn test_json_take_chars() -> WplCodeResult<()> {
         let rule = r#"rule test { (json(chars@key)) }"#;
         let data = r#"{"key":  "hello boy"}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("key") {
             let expected = DataField::from_chars("key", "hello boy");
             assert_eq!(i.as_field(), &expected);
@@ -858,11 +859,11 @@ mod tests {
     }
 
     #[test]
-    fn test_json_take_chars2() -> AnyResult<()> {
+    fn test_json_take_chars2() -> WplCodeResult<()> {
         let rule = r#"rule test { (json(@action,_@*))}"#;
         let data = r#"{"action": "{\"text\": \"10.91.7.38(局域网) 访问 已知Webshell 10.48.116.32:8080/newShell/hello.jsp（物理路径：/usr/local/apache-tomcat-8.0.23/webapps/newShell/hello.jsp）。来源：网页浏览实时防护\", \"html\": \"<span class='ip'>10.91.7.38</span><span class='ipAddr'>(局域网)</span> 访问 <span class='type'>已知Webshell</span> <span class='url'>10.48.116.32:8080/newShell/hello.jsp</span><span class='webPagePhysicalPath'>（物理路径：/usr/local/apache-tomcat-8.0.23/webapps/newShell/hello.jsp）</span>。来源：<span class='source'> 网页浏览实时防护</span>\"}"}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("action") {
             let expected = DataField::from_chars(
                 "action",
@@ -875,11 +876,11 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_json_symbol() -> AnyResult<()> {
+    fn test_json_symbol() -> WplCodeResult<()> {
         let rule = r#"rule test { (json(symbol(boy)@key)) }"#;
         let data = r#"{"key":  "boy"}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("key") {
             let expected = DataField::from_symbol("key", "boy");
             assert_eq!(i.as_field(), &expected);

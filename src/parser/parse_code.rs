@@ -2,8 +2,7 @@ use crate::ast::WplExpress;
 use crate::parser::utils::is_sep_next;
 use crate::parser::wpl_group::wpl_group;
 use crate::parser::wpl_rule;
-use crate::types::AnyResult;
-use anyhow::anyhow;
+use crate::parser::error::{WplCodeResult, WPLCodeErrorTrait};
 use winnow::ascii::multispace0;
 use winnow::combinator::{cut_err, delimited, opt};
 use winnow::token::literal;
@@ -43,10 +42,10 @@ pub(crate) fn segment(input: &mut &str) -> WResult<WplExpress> {
     Ok(define)
 }
 
-pub fn source_segment(code: &str) -> AnyResult<WplExpress> {
+pub fn source_segment(code: &str) -> WplCodeResult<WplExpress> {
     segment
         .parse(code)
-        .map_err(|e| anyhow!("parse source_prefix error: {:?}", e))
+        .map_err(|e| WPLCodeErrorTrait::from_parse_err(e, code, "<segment>"))
 }
 
 /*
@@ -73,9 +72,12 @@ mod tests {
     use crate::parser::error::WplCodeError;
     use crate::parser::wpl_pkg::{wpl_package, wpl_pkg_body};
     use crate::parser::wpl_rule::pip_proc;
-    use crate::types::AnyResult;
-    use orion_error::{ErrorOwe, TestAssert};
+    use crate::parser::error::WplCodeResult;
+    use orion_error::compat_traits::ErrorOweBase;
+    use orion_error::testcase::TestAssert;
+    use orion_error::UvsFrom;
     use wp_model_core::model::DataType;
+    use crate::parser::error::WplCodeReason;
 
     #[test]
     fn test_package() -> Result<(), WplCodeError> {
@@ -87,7 +89,7 @@ mod tests {
         assert_eq!(
             wpl_package
                 .parse(&LocatingSlice::new(input))
-                .owe_conf()?
+                .owe(WplCodeReason::from_conf())?
                 .to_string(),
             r#"package test {
   rule test {
@@ -296,7 +298,7 @@ mod tests {
     }
 
     #[test]
-    fn test_conf_map() -> AnyResult<()> {
+    fn test_conf_map() -> WplCodeResult<()> {
         let data = r#"(json(base64@a:x,@b:y))"#;
         let conf = wpl_express.parse(data).assert();
         let map = conf.group[0].fields[0].sub_fields.as_ref().unwrap();
@@ -341,7 +343,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rules() -> AnyResult<()> {
+    fn test_rules() -> WplCodeResult<()> {
         let data = r#" rule wparse_1 { |decode/base64|zip|unquote/unescape|(digit,time) }"#;
         wpl_pkg_body(&mut WplPackage::default())
             .parse(data)

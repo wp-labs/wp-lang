@@ -3,6 +3,7 @@ use crate::eval::runtime::field::FieldEvalUnit;
 use crate::generator::ParserValue;
 use wp_model_core::model::FNameStr;
 
+use crate::parser::error::IntoWplCodeError;
 use crate::parser::utils::quot_str;
 
 use winnow::ascii::{digit1, multispace0};
@@ -106,7 +107,7 @@ impl PatternParser for ArrayP {
         _gen: &mut GenChannel,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         // 最小实现：根据 array 的子类型生成 2 个样例元素，并包装为数组字段
         use crate::eval::value::parser::ParserFactory;
         // no local imports needed; use ParserFactory directly
@@ -121,7 +122,7 @@ impl PatternParser for ArrayP {
 
         // 构造元素字段配置，并用对应解析器生成 2 个元素
         let mut items: Vec<DataField> = Vec::with_capacity(2);
-        let elem_conf = WplField::sub_for_arr(elem_meta.to_string().as_str())?;
+        let elem_conf = WplField::sub_for_arr(elem_meta.to_string().as_str()).map_err(|e| e.into_wpl_err())?;
         let elem_parser = ParserFactory::create(&elem_meta)?;
         let sep = WplSep::default();
 
@@ -164,11 +165,11 @@ mod tests {
     */
 
     #[test]
-    fn test_array() -> AnyResult<()> {
+    fn test_array() -> WplCodeResult<()> {
         let data = r#"[1, 2, 3]"#;
         let rule = r#" rule x { (array/digit:array_val)}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         let expected = vec![
             DataField::new_opt(DataType::Digit, Some("array_val/[0]".into()), 1.into()),
@@ -181,7 +182,7 @@ mod tests {
         let data = r#"["hello", "_F]fe", "!@#$*&^\"123"]"#;
         let rule = r#" rule x { (array/chars:array)}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         let expected = vec![
             DataField::new_opt(DataType::Chars, Some("array/[0]".into()), "hello".into()),
@@ -199,7 +200,7 @@ mod tests {
         let data = r#"[1,2,3,]"#;
         let rule = r#" rule x { (array/digit:nums)}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         let expected = vec![
             DataField::new_opt(DataType::Digit, Some("nums/[0]".into()), 1.into()),
             DataField::new_opt(DataType::Digit, Some("nums/[1]".into()), 2.into()),
@@ -212,7 +213,7 @@ mod tests {
         let data = r#"[]"#;
         let rule = r#" rule x { (array/digit:empty)}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         let expected: Vec<DataField> = vec![];
         let expected = DataField::from_arr("empty".to_string(), expected);
         assert_eq!(tdc.get_field_owned("empty"), Some(expected));
@@ -220,14 +221,14 @@ mod tests {
     }
 
     #[test]
-    fn test_array_ip_with_quotes() -> AnyResult<()> {
+    fn test_array_ip_with_quotes() -> WplCodeResult<()> {
         let data = r#"["1.1.1.1","2.2.2.2"]"#;
         let rule = r#" rule x { (array/ip:ips)}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         let expected = vec![
-            DataField::from_ip("ips/[0]", IpAddr::from_str("1.1.1.1")?),
-            DataField::from_ip("ips/[1]", IpAddr::from_str("2.2.2.2")?),
+            DataField::from_ip("ips/[0]", IpAddr::from_str("1.1.1.1").map_err(|e| e.into_wpl_err())?),
+            DataField::from_ip("ips/[1]", IpAddr::from_str("2.2.2.2").map_err(|e| e.into_wpl_err())?),
         ];
         let expected = DataField::from_arr("ips".to_string(), expected);
         assert_eq!(tdc.get_field_owned("ips"), Some(expected));
@@ -235,11 +236,11 @@ mod tests {
     }
 
     #[test]
-    fn test_arr_arr() -> AnyResult<()> {
+    fn test_arr_arr() -> WplCodeResult<()> {
         let data = "[[1,2],[3,4]]";
         let rule = r#" rule x { (array/array/digit:array)}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
 
         let obj = DataField::from_arr(
@@ -263,12 +264,12 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_arr_json() -> AnyResult<()> {
+    fn test_arr_json() -> WplCodeResult<()> {
         let data = r#"[{"name":"xxx", "value":"xxx"}, {"name": "xxxx", "value": 85.2}]"#;
 
         let rule = r#" rule x { (array/json:array)}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         let obj = vec![
             DataField::new_opt(DataType::Chars, Some("array/[0]/name".into()), "xxx".into()),
@@ -290,35 +291,35 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_arr_1() -> AnyResult<()> {
+    fn test_arr_1() -> WplCodeResult<()> {
         let data = r#"[1.1.1.1,2.2.2.2]"#;
         let rule = r#" rule x { (array/ip:block_ips)}"#;
         let pipe = WplEvaluator::from_code(rule)?;
 
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         assert!(tdc.field("block_ips").is_some());
         Ok(())
     }
     #[test]
-    fn test_arr_01() -> AnyResult<()> {
+    fn test_arr_01() -> WplCodeResult<()> {
         let data = r#"[]"#;
         let rule = r#" rule x { (array/ip:block_ips)}"#;
         let pipe = WplEvaluator::from_code(rule)?;
 
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         assert!(tdc.field("block_ips").is_some());
         Ok(())
     }
 
     #[test]
-    fn test_arr_00() -> AnyResult<()> {
+    fn test_arr_00() -> WplCodeResult<()> {
         let data = r#"[]"#;
         let rule = r#" rule x { (array/chars:block_ips)}"#;
         let pipe = WplEvaluator::from_code(rule)?;
 
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         assert!(tdc.field("block_ips").is_some());
         Ok(())

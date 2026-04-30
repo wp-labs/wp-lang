@@ -76,14 +76,14 @@ pub fn not_proc(
 
 #[cfg(test)]
 mod tests {
-    use crate::types::AnyResult;
+    use crate::parser::error::WplCodeResult;
     use crate::{WplEvaluator, wpl_express};
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
     use wp_model_core::model::DataField;
     use wp_primitives::Parser;
 
     #[test]
-    fn test_not_group_basic() -> AnyResult<()> {
+    fn test_not_group_basic() -> WplCodeResult<()> {
         // not(symbol(ERROR)) should succeed when ERROR is NOT present
         let express = wpl_express.parse(r#"not(symbol(ERROR):test)"#).assert();
         let mut data = "INFO: hello world";
@@ -101,7 +101,7 @@ mod tests {
     }
 
     #[test]
-    fn test_not_group_failure() -> AnyResult<()> {
+    fn test_not_group_failure() -> WplCodeResult<()> {
         // not(symbol(ERROR)) should fail when ERROR IS present
         let express = wpl_express.parse(r#"not(symbol(ERROR):test)"#).assert();
         let mut data = "ERROR: something wrong";
@@ -114,7 +114,7 @@ mod tests {
     }
 
     #[test]
-    fn test_not_with_peek_symbol() -> AnyResult<()> {
+    fn test_not_with_peek_symbol() -> WplCodeResult<()> {
         // not(peek_symbol(ERROR)) should not consume input
         // Correct format: multiple parallel groups
         let express = wpl_express

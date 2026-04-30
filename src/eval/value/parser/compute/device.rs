@@ -14,7 +14,7 @@ use crate::eval::value::parse_def::PatternParser;
 use crate::eval::value::parser::physical::foundation::gen_chars;
 use crate::generator::FieldGenConf;
 use crate::generator::GenChannel;
-use crate::types::AnyResult;
+use crate::parser::error::WplCodeResult;
 
 #[derive(Default)]
 pub struct SnP {}
@@ -39,7 +39,7 @@ impl PatternParser for SnP {
         gnc: &mut GenChannel,
         f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         let one = gen_chars(gnc, 4, true);
         let two = gen_chars(gnc, 2, true);
         let thr = gen_chars(gnc, 4, true);

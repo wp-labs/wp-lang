@@ -13,8 +13,8 @@ use wp_parse_api::{PipeHold, WparseError, WparseReason};
 
 use crate::parser::error::{WplCodeError, WplCodeReason};
 use crate::parser::wpl_rule::wpl_rule;
-use anyhow::Result;
-use orion_error::{ErrorWith, ToStructError, UvsFrom};
+use orion_error::{ErrorWith, UvsFrom};
+use orion_error::conversion::ToStructError;
 use wp_log::debug_edata;
 use wp_model_core::model::DataRecord;
 use wp_primitives::Parser;
@@ -79,9 +79,9 @@ impl WplEvaluator {
         for proc_unit in &self.preorder {
             target = proc_unit
                 .process(target)
-                .want("pipe convert")
-                .with(e_id.to_string())
-                .with(proc_unit.name())?;
+                .doing("pipe convert")
+                .with_context(e_id.to_string())
+                .with_context(proc_unit.name())?;
 
             debug_edata!(
                 e_id,
@@ -93,16 +93,18 @@ impl WplEvaluator {
         Ok(target)
     }
 
-    pub fn proc<D>(&self, e_id: u64, data: D, oth_suc_len: usize) -> DataResult
-    where
-        D: IntoRawData,
-    {
-        let mut working_raw: RawData = data.into_raw();
-        if !self.preorder.is_empty() {
-            working_raw = self.pipe_proc(e_id, working_raw)?;
-        }
+    /// 从引用解析，仅在 preorder 不为空时 clone 数据。
+    /// 高频调用路径避免每条规则都 clone payload。
+    pub fn proc_ref(&self, e_id: u64, data: &RawData, oth_suc_len: usize) -> DataResult {
+        let owned: Option<RawData>;
+        let working_raw: &RawData = if !self.preorder.is_empty() {
+            owned = Some(self.pipe_proc(e_id, data.clone())?);
+            owned.as_ref().unwrap()
+        } else {
+            data
+        };
 
-        let input_holder: Cow<'_, str> = match &working_raw {
+        let input_holder: Cow<'_, str> = match working_raw {
             RawData::String(s) => Cow::Borrowed(s.as_str()),
             RawData::Bytes(b) => Cow::Owned(String::from_utf8_lossy(b).into_owned()),
             RawData::ArcBytes(b) => Cow::Owned(String::from_utf8_lossy(b).into_owned()),
@@ -116,15 +118,28 @@ impl WplEvaluator {
                 let cur_pos = input.len();
                 let pos = ori_len - cur_pos;
                 if pos >= oth_suc_len {
+                    let preview: String = if input.len() <= 80 {
+                        input.to_string()
+                    } else {
+                        input.chars().take(80).collect()
+                    };
                     Err(WparseReason::from_data()
                         .to_err()
-                        .with_detail(format!("{input} @ {pos}"))
+                        .with_detail(format!("{preview} @ {pos}"))
                         .with_detail(e.to_string()))
                 } else {
                     Err(WparseError::from(WparseReason::NotMatch))
                 }
             }
         }
+    }
+
+    pub fn proc<D>(&self, e_id: u64, data: D, oth_suc_len: usize) -> DataResult
+    where
+        D: IntoRawData,
+    {
+        let raw: RawData = data.into_raw();
+        self.proc_ref(e_id, &raw, oth_suc_len)
     }
     pub fn from_code(code: &str) -> Result<Self, WplCodeError> {
         let mut cur_code = code;
@@ -283,24 +298,25 @@ impl StopWatch {
 
 #[cfg(test)]
 mod tests {
+    use crate::parser::error::IntoWplCodeError;
     use crate::ast::fld_fmt::for_test::{fdc2, fdc2_1, fdc3, fdc4_1};
     use crate::ast::{WplField, WplFieldFmt};
     use crate::compat::New1;
     use crate::eval::builtins::raw_to_utf8_string;
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::eval::value::parse_def::Hold;
-    use crate::types::AnyResult;
+    use crate::parser::error::WplCodeResult;
     use crate::{WparseResult, WplExpress, register_wpl_pipe};
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
     use smol_str::SmolStr;
     use wp_model_core::raw::RawData;
     use wp_parse_api::PipeProcessor;
 
     #[test]
-    fn log_test_ty() -> AnyResult<()> {
+    fn log_test_ty() -> WplCodeResult<()> {
         let mut data = r#"<158> May 15 14:19:16 skyeye SyslogClient[1]: 2023-05-15 14:19:16|10.180.8.8|alarm| {"_origin": 1}"#;
 
-        let conf = WplExpress::new(vec![fdc3("auto", " ", true)?]);
+        let conf = WplExpress::new(vec![fdc3("auto", " ", true).map_err(|e| e.into_wpl_err())?]);
         let ppl = WplEvaluator::from(&conf, None)?;
 
         let result = ppl.parse_groups(0, &mut data).assert();
@@ -309,8 +325,8 @@ mod tests {
     }
 
     #[test]
-    fn log_test_ips() -> AnyResult<()> {
-        let conf = WplExpress::new(vec![fdc3("auto", " ", true)?]);
+    fn log_test_ips() -> WplCodeResult<()> {
+        let conf = WplExpress::new(vec![fdc3("auto", " ", true).map_err(|e| e.into_wpl_err())?]);
         let ppl = WplEvaluator::from(&conf, None)?;
         let mut data = r#"id=tos time="2023-05-15 09:11:53" fw=OS  pri=5 type=mgmt user=superman src=10.111.233.51 op="Modify pwd of manager" result=0 recorder=manager_so msg="null""#;
         let result = ppl.parse_groups(0, &mut data).assert();
@@ -323,8 +339,8 @@ mod tests {
 
     //59.x.x.x - - [06/Aug/2019:12:12:19 +0800] "GET /nginx-logo.png HTTP/1.1" 200 368 "http://119.x.x.x/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36" "-"
     #[test]
-    fn log_test_nginx() -> AnyResult<()> {
-        let conf = WplExpress::new(vec![fdc3("auto", " ", true)?]);
+    fn log_test_nginx() -> WplCodeResult<()> {
+        let conf = WplExpress::new(vec![fdc3("auto", " ", true).map_err(|e| e.into_wpl_err())?]);
         let ppl = WplEvaluator::from(&conf, None)?;
         let mut data = r#"192.168.1.2 - - [06/Aug/2019:12:12:19 +0800] "GET /nginx-logo.png HTTP/1.1" 200 368 "http://119.122.1.4/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36" "-""#;
 
@@ -335,10 +351,10 @@ mod tests {
     }
 
     #[test]
-    fn test_huawei_default() -> AnyResult<()> {
+    fn test_huawei_default() -> WplCodeResult<()> {
         let mut data = r#"<190>May 15 2023 07:09:12 KM-KJY-DC-USG12004-B02 %%01POLICY/6/POLICYPERMIT(l):CID=0x814f041e;vsys=CSG_Security, protocol=6, source-ip=10.111.117.49, source-port=34616, destination-ip=10.111.48.230, destination-port=50051, time=2023/5/15 15:09:12, source-zone=untrust, destination-zone=trust, application-name=, line-name=HO202212080377705-1.%"#;
 
-        let conf = WplExpress::new(vec![fdc3("auto", " ", true)?]);
+        let conf = WplExpress::new(vec![fdc3("auto", " ", true).map_err(|e| e.into_wpl_err())?]);
         let ppl = WplEvaluator::from(&conf, None)?;
         let result = ppl.parse_groups(0, &mut data).assert();
 
@@ -348,7 +364,7 @@ mod tests {
     }
 
     #[test]
-    fn test_huawei_detail() -> AnyResult<()> {
+    fn test_huawei_detail() -> WplCodeResult<()> {
         //*auto chars: auto; *auto,
         let mut data = r#"<190>May 15 2023 07:09:12 KM-KJY-DC-USG12004-B02 %%01POLICY/6/POLICYPERMIT(l):CID=0x814f041e;vsys=CSG_Security, protocol=6"#;
         let fmt = WplFieldFmt {
@@ -359,13 +375,13 @@ mod tests {
             sub_fmt: None,
         };
         let conf = WplExpress::new(vec![
-            fdc2_1("digit", fmt)?,
-            fdc2("auto", " ")?,
-            fdc2("chars", " ")?,
-            fdc2("chars", ":")?,
-            fdc2("kv", ";")?,
-            fdc2("auto", ",")?,
-            fdc2("auto", ",")?,
+            fdc2_1("digit", fmt).map_err(|e| e.into_wpl_err())?,
+            fdc2("auto", " ").map_err(|e| e.into_wpl_err())?,
+            fdc2("chars", " ").map_err(|e| e.into_wpl_err())?,
+            fdc2("chars", ":").map_err(|e| e.into_wpl_err())?,
+            fdc2("kv", ";").map_err(|e| e.into_wpl_err())?,
+            fdc2("auto", ",").map_err(|e| e.into_wpl_err())?,
+            fdc2("auto", ",").map_err(|e| e.into_wpl_err())?,
         ]);
 
         let ppl = WplEvaluator::from(&conf, None)?;
@@ -376,14 +392,14 @@ mod tests {
     }
 
     #[test]
-    fn test_huawei_simple() -> AnyResult<()> {
+    fn test_huawei_simple() -> WplCodeResult<()> {
         //*auto chars: auto; *auto,
         let mut data = r#"<190>May 15 2023 07:09:12 KM-KJY-DC-USG12004-B02 %%01POLICY/6/POLICYPERMIT(l):CID=0x814f041e;vsys=CSG_Security, protocol=6"#;
         let conf = WplExpress::new(vec![
-            fdc3("auto", " ", true)?,
-            fdc2("chars", ":")?,
-            fdc3("auto", ";", false)?,
-            fdc3("auto", ",", true)?,
+            fdc3("auto", " ", true).map_err(|e| e.into_wpl_err())?,
+            fdc2("chars", ":").map_err(|e| e.into_wpl_err())?,
+            fdc3("auto", ";", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("auto", ",", true).map_err(|e| e.into_wpl_err())?,
         ]);
         let ppl = WplEvaluator::from(&conf, None)?;
         let result = ppl.parse_groups(0, &mut data).assert();
@@ -393,15 +409,15 @@ mod tests {
     }
 
     #[test]
-    fn test_huawei_simple2() -> AnyResult<()> {
+    fn test_huawei_simple2() -> WplCodeResult<()> {
         let mut data = r#"<190>May 15 2023 07:09:12 KM-KJY-DC-USG12004-B02 %%01POLICY/6/POLICYPERMIT(l):CID=0x814f041e;vsys=CSG_Security, protocol=6"#;
         let conf = WplExpress::new(vec![
             WplField::try_parse("symbol(<190>)[5]").assert(),
-            fdc3("time", " ", false)?,
+            fdc3("time", " ", false).map_err(|e| e.into_wpl_err())?,
             WplField::try_parse("symbol(KM)[2]").assert(),
-            fdc2("chars", ":")?,
-            fdc3("auto", ";", false)?,
-            fdc3("auto", ",", true)?,
+            fdc2("chars", ":").map_err(|e| e.into_wpl_err())?,
+            fdc3("auto", ";", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("auto", ",", true).map_err(|e| e.into_wpl_err())?,
         ]);
         let ppl = WplEvaluator::from(&conf, None)?;
         let result = ppl.parse_groups(0, &mut data).assert();
@@ -411,15 +427,15 @@ mod tests {
     }
 
     #[test]
-    fn test_gen() -> AnyResult<()> {
+    fn test_gen() -> WplCodeResult<()> {
         let mut data = r#"2345,2021-7-15 7:50:32,9OPP-MU-JME2-YGUW,chars_740,2022-1-18 19:30:30,jki=BkRzBo0f,138.11.13.43,tEu=GRcCwKkR,chars_493,Mrc=EskxskU3,sYp=jfKkn7th,UBa=eKhcfd9h,nXa=ZQSta6Je"#;
         let conf = WplExpress::new(vec![
-            fdc3("digit", ",", false)?,
-            fdc3("time", ",", false)?,
-            fdc3("sn", ",", false)?,
-            fdc3("chars", ",", false)?,
-            fdc3("time", ",", false)?,
-            fdc3("auto", ",", true)?,
+            fdc3("digit", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("time", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("sn", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("chars", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("time", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("auto", ",", true).map_err(|e| e.into_wpl_err())?,
         ]);
         let ppl = WplEvaluator::from(&conf, None)?;
         let result = ppl.parse_groups(0, &mut data).assert();
@@ -429,22 +445,22 @@ mod tests {
     }
 
     #[test]
-    fn test_gen2() -> AnyResult<()> {
+    fn test_gen2() -> WplCodeResult<()> {
         let mut data = r#"7106,2020-6-10 2:54:9,U5BH-UC-UQVY-MMKU,chars_472,2020-9-22 13:4:6,Emm=LXJDV5DC,22.161.67.67,nsL=LvVRv5uf,chars_1534,DNw=0xCQKTaQ,UFh=dMPbabRG,q29=aMsZTj83,oUi=ywMsKT2G"#;
         let conf = WplExpress::new(vec![
-            fdc3("digit", ",", false)?,
-            fdc3("time", ",", false)?,
-            fdc3("sn", ",", false)?,
-            fdc3("chars", ",", false)?,
-            fdc3("time", ",", false)?,
-            fdc3("kv", ",", false)?,
-            fdc3("ip", ",", false)?,
-            fdc3("kv", ",", false)?,
-            fdc3("chars", ",", false)?,
-            fdc3("kv", ",", false)?,
-            fdc3("kv", ",", false)?,
-            fdc3("kv", ",", false)?,
-            fdc3("kv", ",", false)?,
+            fdc3("digit", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("time", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("sn", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("chars", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("time", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("kv", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("ip", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("kv", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("chars", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("kv", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("kv", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("kv", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("kv", ",", false).map_err(|e| e.into_wpl_err())?,
         ]);
         let ppl = WplEvaluator::from(&conf, None)?;
         let result = ppl.parse_groups(0, &mut data).assert();
@@ -459,7 +475,7 @@ mod tests {
     }
 
     #[test]
-    fn preorder_plg_pipe_unit_executes() -> AnyResult<()> {
+    fn preorder_plg_pipe_unit_executes() -> WplCodeResult<()> {
         #[derive(Debug)]
         struct MockStage;
 
@@ -477,11 +493,11 @@ mod tests {
 
         register_wpl_pipe!("plg_pipe/MOCK-STAGE", || Hold::new(MockStage));
 
-        let mut expr = WplExpress::new(vec![fdc3("auto", " ", true)?]);
+        let mut expr = WplExpress::new(vec![fdc3("auto", " ", true).map_err(|e| e.into_wpl_err())?]);
         expr.pipe_process = vec![SmolStr::from("plg_pipe/MOCK-STAGE")];
 
         let evaluator = WplEvaluator::from(&expr, None)?;
-        let results = evaluator.preorder_proc(RawData::from_string("data".to_string()))?;
+        let results = evaluator.preorder_proc(RawData::from_string("data".to_string())).map_err(|e| e.into_wpl_err())?;
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].result, "data-mock");
         assert_eq!(results[0].name, "mock_stage");
@@ -489,13 +505,13 @@ mod tests {
     }
 
     #[test]
-    fn test_ignore() -> AnyResult<()> {
+    fn test_ignore() -> WplCodeResult<()> {
         let mut data = r#"2345,2021-7-15 7:50:32,9OPP-MU-JME2-YGUW,chars_740"#;
         let conf = WplExpress::new(vec![
-            fdc3("_", ",", false)?,
-            fdc3("_", ",", false)?,
-            fdc3("_", ",", false)?,
-            fdc3("_", ",", false)?,
+            fdc3("_", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("_", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("_", ",", false).map_err(|e| e.into_wpl_err())?,
+            fdc3("_", ",", false).map_err(|e| e.into_wpl_err())?,
         ]);
         let ppl = WplEvaluator::from(&conf, None)?;
         let result = ppl.parse_groups(0, &mut data).assert();
@@ -505,9 +521,9 @@ mod tests {
     }
 
     #[test]
-    fn test_ignore_cnt() -> AnyResult<()> {
+    fn test_ignore_cnt() -> WplCodeResult<()> {
         let mut data = r#"2345,2021-7-15 7:50:32,9OPP-MU-JME2-YGUW,chars_740"#;
-        let conf = WplExpress::new(vec![fdc4_1("_", ",", true, 4)?]);
+        let conf = WplExpress::new(vec![fdc4_1("_", ",", true, 4).map_err(|e| e.into_wpl_err())?]);
         let ppl = WplEvaluator::from(&conf, None)?;
         let result = ppl.parse_groups(0, &mut data).assert();
         assert_eq!(data, "");
@@ -515,7 +531,7 @@ mod tests {
         result.items.iter().for_each(|f| println!("{}", f));
 
         let mut data = r#"2345,2021-7-15 7:50:32,9OPP-MU-JME2-YGUW,chars_740"#;
-        let conf = WplExpress::new(vec![fdc4_1("_", ",", true, 3)?]);
+        let conf = WplExpress::new(vec![fdc4_1("_", ",", true, 3).map_err(|e| e.into_wpl_err())?]);
         let ppl = WplEvaluator::from(&conf, None)?;
         let result = ppl.parse_groups(0, &mut data).assert();
         assert_eq!(data, "chars_740");
@@ -524,7 +540,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pipe_unit_direct_lookup() -> AnyResult<()> {
+    fn test_pipe_unit_direct_lookup() -> WplCodeResult<()> {
         use crate::eval::builtins::raw_to_utf8_string;
         use crate::{create_preorder_pipe_unit, list_preorder_pipe_units};
 
@@ -564,12 +580,12 @@ mod tests {
         let test_data = RawData::from_string("hello".to_string());
 
         if let Some(processor) = create_preorder_pipe_unit("direct-test") {
-            let result = processor.process(test_data.clone())?;
+            let result = processor.process(test_data.clone()).map_err(|e| e.into_wpl_err())?;
             assert_eq!(raw_to_utf8_string(&result), "hello-mock");
         }
 
         if let Some(processor) = create_preorder_pipe_unit("plg_pipe/mock-prefix") {
-            let result = processor.process(test_data)?;
+            let result = processor.process(test_data).map_err(|e| e.into_wpl_err())?;
             assert_eq!(raw_to_utf8_string(&result), "hello-mock");
         }
 
@@ -585,7 +601,7 @@ mod tests {
     }
 
     #[test]
-    fn test_simplified_assemble_ins_logic() -> AnyResult<()> {
+    fn test_simplified_assemble_ins_logic() -> WplCodeResult<()> {
         use crate::eval::builtins::raw_to_utf8_string;
         use crate::{create_preorder_pipe_unit, list_preorder_pipe_units};
 

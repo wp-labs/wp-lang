@@ -1,6 +1,7 @@
 use crate::ast::AnnFun;
 use crate::{WparseError, WparseReason};
-use orion_error::{ToStructError, UvsFrom};
+use orion_error::conversion::ToStructError;
+use orion_error::UvsFrom;
 use smol_str::SmolStr;
 use std::collections::BTreeMap;
 use wp_connector_api::SourceEvent;
@@ -115,7 +116,7 @@ impl AnnotationType {
 mod tests {
     use super::*;
     use crate::pkg::DEFAULT_KEY;
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
     use std::collections::BTreeMap;
     use wp_connector_api::{SourceEvent, Tags};
     use wp_model_core::model::DataRecord;

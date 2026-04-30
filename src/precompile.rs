@@ -3,9 +3,9 @@ use wp_model_core::model::DataType;
 use crate::ParserFactory;
 use crate::ast::{WplRule, WplSep, WplStatementType};
 use crate::generator::{FmtField, FmtFieldVec, GenChannel, NamedFieldGF};
-use crate::types::AnyResult;
+use crate::parser::error::{IntoWplCodeError, WplCodeResult};
 
-type FieldGenFn = Box<dyn Fn(&mut GenChannel) -> AnyResult<FmtField> + Send + Sync>;
+type FieldGenFn = Box<dyn Fn(&mut GenChannel) -> WplCodeResult<FmtField> + Send + Sync>;
 
 /// A precompiled generator for a whole rule (sequence of fields).
 pub struct CompiledRule {
@@ -17,7 +17,7 @@ impl CompiledRule {
         Self { fields }
     }
     /// Generate one record (Vec of fields).
-    pub fn gen_one(&self) -> AnyResult<FmtFieldVec> {
+    pub fn gen_one(&self) -> WplCodeResult<FmtFieldVec> {
         let mut ch = GenChannel::new();
         let mut out = FmtFieldVec::new();
         for f in &self.fields {
@@ -26,7 +26,7 @@ impl CompiledRule {
         Ok(out)
     }
     /// Generate `count` records; start index is unused but kept for API parity.
-    pub fn gen_batch(&self, _idx_begin: usize, count: usize) -> AnyResult<Vec<FmtFieldVec>> {
+    pub fn gen_batch(&self, _idx_begin: usize, count: usize) -> WplCodeResult<Vec<FmtFieldVec>> {
         let mut v = Vec::with_capacity(count);
         for _ in 0..count {
             v.push(self.gen_one()?);
@@ -55,7 +55,7 @@ pub fn compile_rule(
                     let f_conf_cloned = f_conf.clone();
                     let sep_cloned = sep.clone();
                     let field_fn: FieldGenFn = Box::new(move |ch: &mut GenChannel| {
-                        let meta = DataType::from(f_conf_cloned.meta_name.as_str())?;
+                        let meta = DataType::from(f_conf_cloned.meta_name.as_str()).map_err(|e| e.into_wpl_err())?;
                         let parser = ParserFactory::create(&meta)?;
                         let f = parser.generate(ch, &sep_cloned, &f_conf_cloned, gconf.as_ref())?;
                         Ok(f)

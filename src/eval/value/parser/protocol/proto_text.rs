@@ -58,7 +58,7 @@ impl PatternParser for ProtoTextP {
         _gen: &mut GenChannel,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         unimplemented!("proto generate")
     }
 }
@@ -124,8 +124,8 @@ mod tests {
     use crate::eval::value::test_utils::ParserTUnit;
     use crate::parser::parse_code::wpl_express;
     use crate::parser::wpl_rule::wpl_rule;
-    use crate::types::AnyResult;
-    use orion_error::TestAssert;
+    use crate::parser::error::WplCodeResult;
+    use orion_error::testcase::TestAssert;
     use wp_model_core::model::{DataRecord, DataType};
     use wp_primitives::Parser;
 
@@ -166,7 +166,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_proto_text_4() -> AnyResult<()> {
+    fn test_parse_proto_text_4() -> WplCodeResult<()> {
         let express = wpl_express.parse(
             r#"(proto_text(digit@message_type), proto_text(@skyeye_login/serial_num, chars@skyeye_login/access_time, ip@skyeye_login/sip, ip@skyeye_login/dip, digit@skyeye_login/sport, digit@skyeye_login/dport, _@skyeye_login/user_define/*))"#,
         ).assert();

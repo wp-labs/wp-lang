@@ -1,7 +1,7 @@
 use crate::eval::runtime::field::FieldEvalUnit;
 use crate::eval::value::parse_def::PatternParser;
 use crate::generator::{FieldGenConf, GenChannel};
-use crate::types::AnyResult;
+use crate::parser::error::WplCodeResult;
 use crate::winnow::Parser;
 use winnow::combinator::alt;
 use winnow::stream::Stream as _;
@@ -32,7 +32,7 @@ impl PatternParser for TimeStampPSR {
         gnc: &mut GenChannel,
         f_conf: &crate::ast::WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         super::gen_time(gnc, f_conf, g_conf)
     }
 }

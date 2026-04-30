@@ -39,23 +39,24 @@ impl PatternParser for ExactJsonP {
         _gen: &mut GenChannel,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         unimplemented!("json generate")
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::parser::error::IntoWplCodeError;
     use super::*;
 
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::eval::value::test_utils::ParserTUnit;
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
 
-    use crate::types::AnyResult;
+    use crate::parser::error::WplCodeResult;
 
     #[test]
-    fn test_json() -> AnyResult<()> {
+    fn test_json() -> WplCodeResult<()> {
         let mut data = r#"{"a":1,"b":2}"#;
         let conf = WplField::try_parse("exact_json(digit@a,digit@b)").assert();
         ParserTUnit::new(ExactJsonP::default(), conf.clone())
@@ -74,7 +75,7 @@ mod tests {
     }
 
     #[test]
-    fn test_json_str_mode_decoded_pipe() -> AnyResult<()> {
+    fn test_json_str_mode_decoded_pipe() -> WplCodeResult<()> {
         // 默认 raw：保留反斜杠
         let mut data = r#"{"path":"c:\\users\\fc\\file","txt":"line1\nline2"}"#;
         let conf = WplField::try_parse("json(chars@path,chars@txt)").assert();
@@ -104,11 +105,11 @@ mod tests {
     }
 
     #[test]
-    fn test_json_array() -> AnyResult<()> {
+    fn test_json_array() -> WplCodeResult<()> {
         let rule = r#"rule test { (exact_json(auto@name,auto@value,auto@key))\, }"#;
         let data = r#"{"name": "中国", "value": 96, "key" : ["a","b","c"] }"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, data, 0)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("key[0]") {
             println!("{}", i);
             //assert_eq!(*i, TDOEnum::from_digit("cpu", 96));
@@ -119,7 +120,7 @@ mod tests {
     }
 
     #[test]
-    fn test_exact_json_missing_immediate() -> AnyResult<()> {
+    fn test_exact_json_missing_immediate() -> WplCodeResult<()> {
         // b 缺失，应在严格模式下报错
         let mut data = r#"{"a":1}"#;
         let conf = WplField::try_parse("exact_json(digit@a,digit@b)").assert();

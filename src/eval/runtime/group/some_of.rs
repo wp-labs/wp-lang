@@ -41,13 +41,13 @@ impl LogicProc for GroupSomeOf {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::AnyResult;
+    use crate::parser::error::WplCodeResult;
     use crate::{WplEvaluator, wpl_express};
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
     use wp_primitives::Parser;
 
     #[test]
-    fn test_some_of_group1() -> AnyResult<()> {
+    fn test_some_of_group1() -> WplCodeResult<()> {
         let express = wpl_express
             .parse(r#"some_of(ip:sip, time<[,]>,digit:id),(2*_,time<[,]>)"#)
             .assert();
@@ -77,7 +77,7 @@ mod tests {
     }
 
     #[test]
-    fn test_some_of_group2() -> AnyResult<()> {
+    fn test_some_of_group2() -> WplCodeResult<()> {
         let express = wpl_express
             .parse(
                 r#"some_of (
@@ -102,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn test_some_of_group3() -> AnyResult<()> {
+    fn test_some_of_group3() -> WplCodeResult<()> {
         let express = wpl_express
             .parse(r#"some_of(kv(chars@b:bbbb<[,]>),kv(chars@c:ccc),kv(chars@a:aaaa))\|"#)
             .assert();
@@ -126,7 +126,7 @@ mod tests {
     }
 
     #[test]
-    fn test_some_of_group4() -> AnyResult<()> {
+    fn test_some_of_group4() -> WplCodeResult<()> {
         let express = wpl_express
             .parse(r#"some_of(kv(chars<[,]>),chars)\|"#)
             .assert();

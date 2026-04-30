@@ -4,7 +4,8 @@ mod test {
 
     use wp_primitives::Parser;
 
-    use crate::types::AnyResult;
+    use crate::parser::error::WplCodeResult;
+    use crate::parser::error::IntoWplCodeError;
 
     use crate::parser::wpl_rule::wpl_rule;
 
@@ -19,14 +20,14 @@ mod test {
         log_line: &WplRule,
         ups_sep: &WplSep,
         rules: &HashMap<String, FieldGenConf>,
-    ) -> AnyResult<FmtFieldVec> {
+    ) -> WplCodeResult<FmtFieldVec> {
         let mut fieldset = FmtFieldVec::new();
         let WplStatementType::Express(rule) = &log_line.statement;
         for group in &rule.group {
             for field in &group.fields {
                 let rule = field.name.clone().and_then(|name| rules.get(name.as_str()));
                 let mut ch = GenChannel::new();
-                let meta = DataType::from(field.meta_name.as_str())?;
+                let meta = DataType::from(field.meta_name.as_str()).map_err(|e| e.into_wpl_err())?;
                 let parser = ParserFactory::create(&meta)?;
                 let field = parser.generate(&mut ch, ups_sep, field, rule)?;
                 fieldset.push(field);
@@ -42,7 +43,7 @@ mod test {
     }
 
     #[test]
-    fn test_gen() -> AnyResult<()> {
+    fn test_gen() -> WplCodeResult<()> {
         let conf = r#"rulegen {(digit\,,time\:,sn,chars\|)}"#;
         let conf_vec = parser_by_conf(conf);
         let rules = HashMap::new();
@@ -53,7 +54,7 @@ mod test {
     }
 
     #[test]
-    fn test_gen_ty_log() -> AnyResult<()> {
+    fn test_gen_ty_log() -> WplCodeResult<()> {
         let conf = r#"rule ty_log {
         (kv:message_type<:,|>,chars:sensor_log,chars[0]<{,|>,kv:serial_num,kv:access_time,kv:sip,kv:sport,
         kv:dip,kv:dport,kv:proto,kv:passwd,kv:info,kv:user,kv:db_type,kv:vendor_id,kv:device_ip,chars[0]<user_define {,|>,

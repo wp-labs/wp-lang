@@ -31,7 +31,7 @@ impl PatternParser for BadJsonP {
         _gen: &mut GenChannel,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         unimplemented!("bad_json generate")
     }
 }
@@ -42,11 +42,12 @@ mod tests {
     use crate::ast::WplField;
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::eval::value::test_utils::ParserTUnit;
-    use crate::types::AnyResult;
-    use orion_error::TestAssert;
+    use crate::parser::error::WplCodeResult;
+    use orion_error::testcase::TestAssert;
 
     const UNKNOWN_JSON_SAMPLE: &str = include_str!("../../../../../tests/unknow.json");
 
+    use crate::parser::error::IntoWplCodeError;
     #[test]
     fn bad_json_parser_outputs_raw_chars() {
         let mut data = UNKNOWN_JSON_SAMPLE;
@@ -58,10 +59,10 @@ mod tests {
     }
 
     #[test]
-    fn evaluator_supports_bad_json_alias() -> AnyResult<()> {
+    fn evaluator_supports_bad_json_alias() -> WplCodeResult<()> {
         let rule = r#"rule test { (bad_json:raw) }"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, rest) = pipe.proc(0, UNKNOWN_JSON_SAMPLE, 0)?;
+        let (tdc, rest) = pipe.proc(0, UNKNOWN_JSON_SAMPLE, 0).map_err(|e| e.into_wpl_err())?;
         assert_eq!(rest, "");
         assert_eq!(
             tdc.field("raw").map(|f| f.as_field()),
@@ -71,10 +72,10 @@ mod tests {
     }
 
     #[test]
-    fn json_like_and_bad_json_work_together_end_to_end() -> AnyResult<()> {
+    fn json_like_and_bad_json_work_together_end_to_end() -> WplCodeResult<()> {
         let rule = r#"rule test { |json_like| (bad_json:raw) }"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, rest) = pipe.proc(0, UNKNOWN_JSON_SAMPLE, 0)?;
+        let (tdc, rest) = pipe.proc(0, UNKNOWN_JSON_SAMPLE, 0).map_err(|e| e.into_wpl_err())?;
         assert_eq!(rest, "");
         assert_eq!(
             tdc.field("raw").map(|f| f.as_field()),

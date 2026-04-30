@@ -1,10 +1,10 @@
 use crate::winnow::error::{ContextError, ParseError, StrContext};
 use derive_more::From;
-use orion_error::StructError;
-use orion_error::{ErrorCode, UvsReason};
-use thiserror::Error;
+use orion_error::{OrionError, StructError, UvsReason};
+use serde::Serialize;
 use winnow::error::{ErrMode, Needed};
 use wp_error::util::split_string;
+use wp_model_core::model::MetaErr;
 // use wp_error::DataErrKind; // kept for potential future conversions
 
 fn translate_position(input: &[u8], index: usize) -> (usize, usize) {
@@ -84,34 +84,72 @@ pub fn error_detail(error: ParseError<&str, ContextError<StrContext>>) -> String
     msg
 }
 
-#[derive(Error, Debug, PartialEq, Serialize, From)]
+#[derive(Debug, Clone, PartialEq, Serialize, From, OrionError)]
 pub enum WplCodeReason {
+    #[orion_error(identity = "biz.plugin")]
     #[from(skip)]
-    #[error("plugin error >{0}")]
     Plugin(String),
-    #[error("syntax error >{0}")]
+    #[orion_error(identity = "biz.syntax")]
     Syntax(String),
+    #[orion_error(identity = "biz.wpl_empty")]
     #[from(skip)]
-    #[error("wpl is empty >{0}")]
     Empty(String),
+    #[orion_error(identity = "biz.unsupport")]
     #[from(skip)]
-    #[error("unsupport > {0}")]
     UnSupport(String),
-    #[error("{0}")]
+    #[orion_error(transparent)]
     Uvs(UvsReason),
-}
-impl ErrorCode for WplCodeReason {
-    fn error_code(&self) -> i32 {
-        500
-    }
 }
 
 pub type WplCodeError = StructError<WplCodeReason>;
 
 pub type WplCodeResult<T> = Result<T, WplCodeError>;
 
+/// Trait for converting various error types into WplCodeError.
+/// Uses a local trait to avoid orphan rule restrictions.
+pub(crate) trait IntoWplCodeError {
+    fn into_wpl_err(self) -> WplCodeError;
+}
+
+impl IntoWplCodeError for WplCodeError {
+    fn into_wpl_err(self) -> WplCodeError {
+        self
+    }
+}
+
+impl IntoWplCodeError for MetaErr {
+    fn into_wpl_err(self) -> WplCodeError {
+        WplCodeReason::UnSupport(self.to_string()).into()
+    }
+}
+
+impl IntoWplCodeError for wp_parse_api::WparseError {
+    fn into_wpl_err(self) -> WplCodeError {
+        WplCodeReason::Plugin(self.to_string()).into()
+    }
+}
+
+impl IntoWplCodeError for crate::idcard::Error {
+    fn into_wpl_err(self) -> WplCodeError {
+        WplCodeReason::Plugin(self.to_string()).into()
+    }
+}
+
+impl IntoWplCodeError for std::string::FromUtf8Error {
+    fn into_wpl_err(self) -> WplCodeError {
+        WplCodeReason::Plugin(self.to_string()).into()
+    }
+}
+
+impl IntoWplCodeError for std::net::AddrParseError {
+    fn into_wpl_err(self) -> WplCodeError {
+        WplCodeReason::Plugin(self.to_string()).into()
+    }
+}
+
 pub trait WPLCodeErrorTrait {
     fn from_syntax(e: ErrMode<ContextError>, code: &str, path: &str) -> Self;
+    fn from_parse_err(e: ParseError<&str, ContextError>, code: &str, path: &str) -> Self;
 }
 impl WPLCodeErrorTrait for StructError<WplCodeReason> {
     fn from_syntax(e: ErrMode<ContextError>, code: &str, path: &str) -> Self {
@@ -137,6 +175,14 @@ impl WPLCodeErrorTrait for StructError<WplCodeReason> {
                 )))
             }
         }
+    }
+
+    fn from_parse_err(e: ParseError<&str, ContextError>, code: &str, path: &str) -> Self {
+        let where_in = split_string(code);
+        StructError::from(WplCodeReason::Syntax(format!(
+            "parse error\n[path ]: '{}'\n[where]: '{}'\n[error]: {}",
+            path, where_in, e
+        )))
     }
 }
 

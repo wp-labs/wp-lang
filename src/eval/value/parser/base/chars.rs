@@ -8,7 +8,7 @@ use crate::eval::value::parser::physical::foundation::gen_chars;
 use crate::generator::{FieldGenConf, GenScopeEnum};
 use crate::generator::{GenChannel, ParserValue};
 use crate::parser::utils::{quot_r_str, quot_str, take_to_end, window_path};
-use crate::types::AnyResult;
+use crate::parser::error::WplCodeResult;
 use rand::RngExt;
 use winnow::ascii::{digit1, multispace0};
 use winnow::combinator::{alt, preceded};
@@ -52,7 +52,7 @@ impl PatternParser for CharsP {
         gnc: &mut GenChannel,
         f_conf: &WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         let name = f_conf.safe_name();
         let len = f_conf.length.unwrap_or(20);
         let mut dat = gen_chars(gnc, len, false);
@@ -89,8 +89,8 @@ impl PatternParser for CharsP {
 mod tests {
     use crate::ast::WplField;
     use crate::eval::value::test_utils::ParserTUnit;
-    use crate::types::AnyResult;
-    use orion_error::TestAssert;
+    use crate::parser::error::WplCodeResult;
+    use orion_error::testcase::TestAssert;
 
     use super::*;
 
@@ -139,7 +139,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_case() -> AnyResult<()> {
+    fn test_from_case() -> WplCodeResult<()> {
         let mut data = "  -[UMSyncService fetchPersona:forPid:completionHandler:]_block_invoke:";
         let conf = WplField::try_parse("chars<-[,]>").assert();
         let res = ParserTUnit::new(CharsP::default(), conf)
@@ -157,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    fn test_gen() -> AnyResult<()> {
+    fn test_gen() -> WplCodeResult<()> {
         let conf = WplField::try_parse("chars<[,]>").assert();
 
         ParserTUnit::new(CharsP::default(), conf).verify_gen_parse_suc();

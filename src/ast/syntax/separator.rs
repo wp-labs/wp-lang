@@ -112,12 +112,12 @@ pub type SeparatorHold = Hold<dyn Separator>;
 
 #[cfg(test)]
 mod tests {
-    use crate::types::AnyResult;
+    use crate::parser::error::WplCodeResult;
 
     use super::{CharSep, Separator, StrSep};
 
     #[test]
-    fn test_sep_get_field() -> AnyResult<()> {
+    fn test_sep_get_field() -> WplCodeResult<()> {
         let mut data = "kv=val;kv2=val2 ";
         assert_eq!(
             CharSep::new(',').get_field_owned(&mut data),
@@ -159,7 +159,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sep_tag() -> AnyResult<()> {
+    fn test_sep_tag() -> WplCodeResult<()> {
         let mut data = "kv=val;kv2=val2 ";
         assert_eq!(CharSep::new(',').tag(&mut data), Ok(None));
 
@@ -178,7 +178,7 @@ mod tests {
     }
 
     #[test]
-    fn test_diysep() -> AnyResult<()> {
+    fn test_diysep() -> WplCodeResult<()> {
         let mut data = "kv=val;kv2=val2, xxx";
         assert_eq!(
             StrSep::new(";".to_string()).get_field_owned(&mut data),

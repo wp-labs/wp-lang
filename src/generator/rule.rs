@@ -2,10 +2,12 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::net::Ipv4Addr;
 
-use orion_error::{ContextRecord, ErrorOwe, ErrorWith, WithContext};
+use orion_error::compat_traits::ErrorOweBase;
+use orion_error::runtime::ContextRecord;
+use orion_error::{ErrorWith, OperationContext, UvsFrom};
 use wp_model_core::model::FNameStr;
 
-use crate::parser::error::WplCodeResult;
+use crate::parser::error::{WplCodeReason, WplCodeResult};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct FieldsGenRule {
@@ -14,11 +16,11 @@ pub struct FieldsGenRule {
 
 impl FieldsGenRule {
     pub fn load(path: &str) -> WplCodeResult<Self> {
-        let mut ctx = WithContext::want("load gen rule");
+        let mut ctx = OperationContext::doing("load gen rule");
         ctx.record("path", path);
 
-        let content = std::fs::read_to_string(path).owe_conf().with(&ctx)?;
-        let res: Self = toml::from_str(&content).owe_conf().with(&ctx)?;
+        let content = std::fs::read_to_string(path).owe(WplCodeReason::from_conf()).with_context(&ctx)?;
+        let res: Self = toml::from_str(&content).owe(WplCodeReason::from_conf()).with_context(&ctx)?;
         Ok(res)
     }
     pub fn new() -> Self {

@@ -1,4 +1,7 @@
-use orion_error::{ContextRecord, ErrorOweBase, ErrorWith, WithContext};
+use orion_error::compat_traits::ErrorOweBase;
+use orion_error::runtime::ContextRecord;
+use orion_error::OperationContext;
+use orion_error::ErrorWith;
 
 use crate::eval::value::parse_def::{Hold, ParserHold};
 use crate::eval::value::parser::base::digit::{DigitP, FloatP};
@@ -73,7 +76,7 @@ impl ParserFactory {
     }
 
     fn create_l1(meta: &DataType) -> WplCodeResult<ParserHold> {
-        let mut ctx = WithContext::want("create parser");
+        let mut ctx = OperationContext::doing("create parser");
         ctx.record("meta", meta.to_string());
         if let Some(hold) = Self::create_simple(meta) {
             return Ok(hold);
@@ -83,16 +86,16 @@ impl ParserFactory {
         Err(WplCodeError::from(WplCodeReason::UnSupport(
             meta.to_string(),
         )))
-        .with(&ctx)
+        .with_context(&ctx)
     }
 
     pub fn create(meta: &DataType) -> WplCodeResult<ParserHold> {
-        let mut ctx = WithContext::want("create parser");
+        let mut ctx = OperationContext::doing("create parser");
         ctx.record("meta", meta.to_string());
         if let DataType::Array(next_name) = meta {
             let sub_meta = DataType::from(next_name.as_str())
                 .owe(WplCodeReason::UnSupport(next_name.into()))
-                .with(&ctx)?;
+                .with_context(&ctx)?;
             match Self::create(&sub_meta) {
                 Ok(_) => Ok(Hold::new(ArrayP::new())),
                 Err(e) => Err(e),

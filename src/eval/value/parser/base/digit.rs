@@ -2,7 +2,7 @@ use super::super::prelude::*;
 use crate::ast::group::WplGroupType;
 use crate::generator::{FieldGenConf, GenScopeEnum};
 use crate::generator::{GenChannel, ParserValue};
-use crate::types::AnyResult;
+use crate::parser::error::WplCodeResult;
 use rand::RngExt;
 use winnow::ascii::{dec_int, float, multispace0};
 use winnow::combinator::preceded;
@@ -59,7 +59,7 @@ impl PatternParser for DigitP {
         gnc: &mut GenChannel,
         f_conf: &WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         let range = if let Some(Some(GenScopeEnum::Digit(digit))) = g_conf.map(|c| &c.scope) {
             let beg: i64 = digit.beg;
             let end: i64 = digit.end;
@@ -98,7 +98,7 @@ impl PatternParser for FloatP {
         gnc: &mut GenChannel,
         f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         let fst = gnc.rng.random_range(0..2000);
         let sec = gnc.rng.random_range(100..999);
 
@@ -116,8 +116,8 @@ mod tests {
     use crate::eval::value::parser::protocol::json::JsonP;
     use crate::eval::value::test_utils::ParserTUnit;
     use crate::parser::parse_code::wpl_express;
-    use crate::types::AnyResult;
-    use orion_error::TestAssert;
+    use crate::parser::error::WplCodeResult;
+    use orion_error::testcase::TestAssert;
     use wp_model_core::model::{DataRecord, Value};
     use wp_model_core::raw::RawData;
 
@@ -125,8 +125,9 @@ mod tests {
     #[allow(clippy::approx_constant)]
     const PI: f64 = 3.14;
 
+    use crate::parser::error::IntoWplCodeError;
     #[test]
-    fn test_digit() -> AnyResult<()> {
+    fn test_digit() -> WplCodeResult<()> {
         let mut data = "-99";
         let conf = WplField::try_parse("digit").assert();
         let field = ParserTUnit::new(DigitP::default(), conf)
@@ -169,7 +170,7 @@ mod tests {
     }
 
     #[test]
-    fn test_float() -> AnyResult<()> {
+    fn test_float() -> WplCodeResult<()> {
         let mut data = "[ 3.14]";
         let conf = WplField::try_parse("float<[,]>").assert();
         let field = ParserTUnit::new(FloatP::default(), conf)
@@ -187,7 +188,7 @@ mod tests {
     }
 
     #[test]
-    fn test_digit_gen() -> AnyResult<()> {
+    fn test_digit_gen() -> WplCodeResult<()> {
         let conf = WplField::try_parse("digit<[,]>").assert();
         ParserTUnit::new(DigitP::default(), conf).verify_gen_parse_suc();
 
@@ -200,13 +201,13 @@ mod tests {
     }
 
     #[test]
-    fn test_digit_empty() -> AnyResult<()> {
+    fn test_digit_empty() -> WplCodeResult<()> {
         let data = r#"1||3"#;
         let wpl = r#"(digit)\|,alt(digit:x,chars:x)\|,(digit)"#;
         let express = wpl_express.parse(wpl).assert();
         let lpp = WplEvaluator::from(&express, None).assert();
         let raw = RawData::from_string(data.to_string());
-        let (tdc, _) = lpp.proc(0, raw, 0)?;
+        let (tdc, _) = lpp.proc(0, raw, 0).map_err(|e| e.into_wpl_err())?;
         let tdc_assert = DataRecord::from(vec![
             DataField {
                 meta: DataType::Digit,
@@ -228,13 +229,13 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_digit_opt() -> AnyResult<()> {
+    fn test_digit_opt() -> WplCodeResult<()> {
         let data = r#"1|2|3"#;
         let wpl = r#"(digit)\|,opt(digit)\|,(digit)"#;
         let express = wpl_express.parse(wpl).assert();
         let lpp = WplEvaluator::from(&express, None).assert();
         let raw = RawData::from_string(data.to_string());
-        let (tdc, _) = lpp.proc(0, raw, 0)?;
+        let (tdc, _) = lpp.proc(0, raw, 0).map_err(|e| e.into_wpl_err())?;
         let tdc_assert = DataRecord::from(vec![
             DataField {
                 meta: DataType::Digit,

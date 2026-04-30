@@ -131,13 +131,14 @@ mod tests {
     use bytes::Bytes;
 
     use super::*;
-    use crate::types::AnyResult;
+    use crate::parser::error::WplCodeResult;
 
     /// 检测数据开头是否为 BOM（用于测试）
     fn detect_bom(data: &[u8]) -> Option<usize> {
         detect_bom_at(data, 0)
     }
 
+    use crate::parser::error::IntoWplCodeError;
     #[test]
     fn test_detect_utf8_bom() {
         let data = &[0xEF, 0xBB, 0xBF, b'h', b'e', b'l', b'l', b'o'];
@@ -182,73 +183,73 @@ mod tests {
     }
 
     #[test]
-    fn test_bom_clear_utf8_string() -> AnyResult<()> {
+    fn test_bom_clear_utf8_string() -> WplCodeResult<()> {
         // UTF-8 BOM + "hello"
         let mut input = vec![0xEF, 0xBB, 0xBF];
         input.extend_from_slice(b"hello");
-        let data = RawData::from_string(String::from_utf8(input)?);
+        let data = RawData::from_string(String::from_utf8(input).map_err(|e| e.into_wpl_err())?);
 
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(crate::eval::builtins::raw_to_utf8_string(&result), "hello");
         Ok(())
     }
 
     #[test]
-    fn test_bom_clear_utf16_le_bytes() -> AnyResult<()> {
+    fn test_bom_clear_utf16_le_bytes() -> WplCodeResult<()> {
         // UTF-16 LE BOM + "hello"
         let mut input = vec![0xFF, 0xFE];
         input.extend_from_slice(b"hello");
         let data = RawData::Bytes(Bytes::from(input));
 
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert!(matches!(result, RawData::Bytes(_)));
         assert_eq!(crate::eval::builtins::raw_to_utf8_string(&result), "hello");
         Ok(())
     }
 
     #[test]
-    fn test_bom_clear_utf16_be_bytes() -> AnyResult<()> {
+    fn test_bom_clear_utf16_be_bytes() -> WplCodeResult<()> {
         // UTF-16 BE BOM + "world"
         let mut input = vec![0xFE, 0xFF];
         input.extend_from_slice(b"world");
         let data = RawData::Bytes(Bytes::from(input));
 
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert!(matches!(result, RawData::Bytes(_)));
         assert_eq!(crate::eval::builtins::raw_to_utf8_string(&result), "world");
         Ok(())
     }
 
     #[test]
-    fn test_bom_clear_utf32_le_arc_bytes() -> AnyResult<()> {
+    fn test_bom_clear_utf32_le_arc_bytes() -> WplCodeResult<()> {
         // UTF-32 LE BOM + "test"
         let mut input = vec![0xFF, 0xFE, 0x00, 0x00];
         input.extend_from_slice(b"test");
         let data = RawData::ArcBytes(Arc::new(input));
 
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert!(matches!(result, RawData::ArcBytes(_)));
         assert_eq!(crate::eval::builtins::raw_to_utf8_string(&result), "test");
         Ok(())
     }
 
     #[test]
-    fn test_bom_clear_utf32_be_arc_bytes() -> AnyResult<()> {
+    fn test_bom_clear_utf32_be_arc_bytes() -> WplCodeResult<()> {
         // UTF-32 BE BOM + "data"
         let mut input = vec![0x00, 0x00, 0xFE, 0xFF];
         input.extend_from_slice(b"data");
         let data = RawData::ArcBytes(Arc::new(input));
 
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert!(matches!(result, RawData::ArcBytes(_)));
         assert_eq!(crate::eval::builtins::raw_to_utf8_string(&result), "data");
         Ok(())
     }
 
     #[test]
-    fn test_bom_clear_no_bom_string() -> AnyResult<()> {
+    fn test_bom_clear_no_bom_string() -> WplCodeResult<()> {
         let data = RawData::from_string("hello world".to_string());
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(
             crate::eval::builtins::raw_to_utf8_string(&result),
             "hello world"
@@ -257,9 +258,9 @@ mod tests {
     }
 
     #[test]
-    fn test_bom_clear_no_bom_bytes() -> AnyResult<()> {
+    fn test_bom_clear_no_bom_bytes() -> WplCodeResult<()> {
         let data = RawData::Bytes(Bytes::from_static(b"no bom here"));
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert!(matches!(result, RawData::Bytes(_)));
         assert_eq!(
             crate::eval::builtins::raw_to_utf8_string(&result),
@@ -269,31 +270,31 @@ mod tests {
     }
 
     #[test]
-    fn test_bom_clear_empty_string() -> AnyResult<()> {
+    fn test_bom_clear_empty_string() -> WplCodeResult<()> {
         let data = RawData::from_string("".to_string());
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(crate::eval::builtins::raw_to_utf8_string(&result), "");
         Ok(())
     }
 
     #[test]
-    fn test_bom_clear_only_bom() -> AnyResult<()> {
+    fn test_bom_clear_only_bom() -> WplCodeResult<()> {
         // 只有 BOM，没有其他数据
         let input = vec![0xEF, 0xBB, 0xBF];
-        let data = RawData::from_string(String::from_utf8(input)?);
-        let result = BomClearProc.process(data)?;
+        let data = RawData::from_string(String::from_utf8(input).map_err(|e| e.into_wpl_err())?);
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(crate::eval::builtins::raw_to_utf8_string(&result), "");
         Ok(())
     }
 
     #[test]
-    fn test_bom_clear_chinese_with_utf8_bom() -> AnyResult<()> {
+    fn test_bom_clear_chinese_with_utf8_bom() -> WplCodeResult<()> {
         // UTF-8 BOM + 中文
         let mut input = vec![0xEF, 0xBB, 0xBF];
         input.extend_from_slice("你好世界".as_bytes());
-        let data = RawData::from_string(String::from_utf8(input)?);
+        let data = RawData::from_string(String::from_utf8(input).map_err(|e| e.into_wpl_err())?);
 
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(
             crate::eval::builtins::raw_to_utf8_string(&result),
             "你好世界"
@@ -302,36 +303,36 @@ mod tests {
     }
 
     #[test]
-    fn test_bom_clear_preserves_container_type() -> AnyResult<()> {
+    fn test_bom_clear_preserves_container_type() -> WplCodeResult<()> {
         // 验证容器类型保持一致
 
         // String -> String
         let str_data = RawData::from_string("\u{FEFF}test".to_string());
-        let str_result = BomClearProc.process(str_data)?;
+        let str_result = BomClearProc.process(str_data).map_err(|e| e.into_wpl_err())?;
         assert!(matches!(str_result, RawData::String(_)));
 
         // Bytes -> Bytes
         let bytes_data = RawData::Bytes(Bytes::from_static(&[0xEF, 0xBB, 0xBF, b't']));
-        let bytes_result = BomClearProc.process(bytes_data)?;
+        let bytes_result = BomClearProc.process(bytes_data).map_err(|e| e.into_wpl_err())?;
         assert!(matches!(bytes_result, RawData::Bytes(_)));
 
         // ArcBytes -> ArcBytes
         let arc_data = RawData::ArcBytes(Arc::new(vec![0xEF, 0xBB, 0xBF, b't']));
-        let arc_result = BomClearProc.process(arc_data)?;
+        let arc_result = BomClearProc.process(arc_data).map_err(|e| e.into_wpl_err())?;
         assert!(matches!(arc_result, RawData::ArcBytes(_)));
 
         Ok(())
     }
 
     #[test]
-    fn test_bom_in_middle_of_data() -> AnyResult<()> {
+    fn test_bom_in_middle_of_data() -> WplCodeResult<()> {
         // 测试数据中间出现的 BOM
         let mut input = b"hello".to_vec();
         input.extend_from_slice(&[0xEF, 0xBB, 0xBF]); // UTF-8 BOM
         input.extend_from_slice(b"world");
         let data = RawData::Bytes(Bytes::from(input));
 
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(
             crate::eval::builtins::raw_to_utf8_string(&result),
             "helloworld"
@@ -340,7 +341,7 @@ mod tests {
     }
 
     #[test]
-    fn test_multiple_boms_in_data() -> AnyResult<()> {
+    fn test_multiple_boms_in_data() -> WplCodeResult<()> {
         // 测试数据中出现多个 BOM
         let mut input = vec![0xEF, 0xBB, 0xBF]; // 开头 UTF-8 BOM
         input.extend_from_slice(b"start");
@@ -348,9 +349,9 @@ mod tests {
         input.extend_from_slice(b"middle");
         input.extend_from_slice(&[0xEF, 0xBB, 0xBF]); // 末尾 UTF-8 BOM
         input.extend_from_slice(b"end");
-        let data = RawData::from_string(String::from_utf8(input)?);
+        let data = RawData::from_string(String::from_utf8(input).map_err(|e| e.into_wpl_err())?);
 
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(
             crate::eval::builtins::raw_to_utf8_string(&result),
             "startmiddleend"
@@ -359,7 +360,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mixed_bom_types() -> AnyResult<()> {
+    fn test_mixed_bom_types() -> WplCodeResult<()> {
         // 测试混合不同类型的 BOM
         let mut input = vec![0xEF, 0xBB, 0xBF]; // UTF-8 BOM
         input.extend_from_slice(b"utf8");
@@ -369,7 +370,7 @@ mod tests {
         input.extend_from_slice(b"data");
         let data = RawData::Bytes(Bytes::from(input));
 
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(
             crate::eval::builtins::raw_to_utf8_string(&result),
             "utf8utf16data"
@@ -378,19 +379,19 @@ mod tests {
     }
 
     #[test]
-    fn test_bom_at_end() -> AnyResult<()> {
+    fn test_bom_at_end() -> WplCodeResult<()> {
         // 测试末尾的 BOM
         let mut input = b"data".to_vec();
         input.extend_from_slice(&[0xEF, 0xBB, 0xBF]); // UTF-8 BOM
         let data = RawData::Bytes(Bytes::from(input));
 
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(crate::eval::builtins::raw_to_utf8_string(&result), "data");
         Ok(())
     }
 
     #[test]
-    fn test_consecutive_boms() -> AnyResult<()> {
+    fn test_consecutive_boms() -> WplCodeResult<()> {
         // 测试连续的 BOM
         let mut input = vec![0xEF, 0xBB, 0xBF]; // UTF-8 BOM
         input.extend_from_slice(&[0xEF, 0xBB, 0xBF]); // 又一个 UTF-8 BOM
@@ -398,22 +399,22 @@ mod tests {
         input.extend_from_slice(b"text");
         let data = RawData::ArcBytes(Arc::new(input));
 
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(crate::eval::builtins::raw_to_utf8_string(&result), "text");
         Ok(())
     }
 
     #[test]
-    fn test_bom_removal_with_chinese() -> AnyResult<()> {
+    fn test_bom_removal_with_chinese() -> WplCodeResult<()> {
         // 测试中文数据中的 BOM
         let mut input = b"start".to_vec();
         input.extend_from_slice(&[0xEF, 0xBB, 0xBF]); // UTF-8 BOM
         input.extend_from_slice("中文".as_bytes());
         input.extend_from_slice(&[0xEF, 0xBB, 0xBF]); // UTF-8 BOM
         input.extend_from_slice("内容".as_bytes());
-        let data = RawData::from_string(String::from_utf8(input)?);
+        let data = RawData::from_string(String::from_utf8(input).map_err(|e| e.into_wpl_err())?);
 
-        let result = BomClearProc.process(data)?;
+        let result = BomClearProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(
             crate::eval::builtins::raw_to_utf8_string(&result),
             "start中文内容"

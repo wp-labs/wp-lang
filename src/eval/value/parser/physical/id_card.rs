@@ -5,6 +5,7 @@ use crate::eval::value::parse_def::PatternParser;
 use crate::generator::FieldGenConf;
 use crate::idcard::fake::new;
 use crate::idcard::{Gender, Identity};
+use crate::parser::error::IntoWplCodeError;
 use smol_str::SmolStr;
 use wp_model_core::model::FNameStr;
 use wp_model_core::model::Value;
@@ -42,8 +43,8 @@ impl PatternParser for IdCardP {
         _gen: &mut GenChannel,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
-        let id = new("310104", 2020, 2, 29, Gender::Male)?;
+    ) -> WplCodeResult<DataField> {
+        let id = new("310104", 2020, 2, 29, Gender::Male).map_err(|e| e.into_wpl_err())?;
         Ok(DataField::new(
             DataType::IdCard,
             "id_card",
@@ -56,7 +57,7 @@ impl PatternParser for IdCardP {
 mod tests {
     use super::*;
     use crate::eval::value::test_utils::ParserTUnit;
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
 
     #[test]
     fn test_id_card() {

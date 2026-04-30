@@ -48,7 +48,7 @@ impl PatternParser for DomainP {
         _gen: &mut GenChannel,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         let charset: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
             .chars()
             .collect();
@@ -125,7 +125,7 @@ fn root_domain<'a>(input: &mut &'a str) -> ModalResult<&'a str> {
 mod tests {
     use super::*;
     use crate::eval::value::test_utils::ParserTUnit;
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
 
     #[test]
     fn test_domain() {

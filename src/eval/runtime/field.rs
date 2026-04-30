@@ -9,7 +9,6 @@ use crate::eval::value::parser::protocol::bad_json::BadJsonP;
 use crate::generator::FieldGenConf;
 use crate::generator::{FmtField, GenChannel};
 use crate::parser::error::WplCodeResult;
-use crate::types::AnyResult;
 use derive_getters::Getters;
 use wp_model_core::model::FNameStr;
 // Use centralized parser result alias for consistency across crates
@@ -124,7 +123,7 @@ impl FieldEvalUnit {
         gnc: &mut GenChannel,
         sep: &WplSep,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<FmtField> {
+    ) -> WplCodeResult<FmtField> {
         self.parser.generate(gnc, sep, self.conf(), g_conf)
     }
     pub fn parse(

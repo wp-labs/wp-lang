@@ -1,8 +1,9 @@
 use bytes::Bytes;
-use orion_error::{ErrorOwe, ErrorWith};
+use orion_error::compat_traits::ErrorOweBase;
+use orion_error::{ErrorWith, UvsFrom};
 use std::sync::Arc;
 use wp_model_core::raw::RawData;
-use wp_parse_api::{PipeProcessor, WparseResult};
+use wp_parse_api::{PipeProcessor, WparseReason, WparseResult};
 
 #[derive(Debug)]
 pub struct EscQuotaProc;
@@ -33,8 +34,8 @@ impl PipeProcessor for EscQuotaProc {
             RawData::String(s) => {
                 let unescaped_bytes = unescape_bytes(s.as_bytes());
                 let vstring = String::from_utf8(unescaped_bytes)
-                    .owe_data()
-                    .want("to-json")?;
+                    .owe(WparseReason::from_data())
+                    .doing("to-json")?;
                 Ok(RawData::from_string(vstring))
             }
             RawData::Bytes(b) => {
@@ -55,32 +56,32 @@ impl PipeProcessor for EscQuotaProc {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::AnyResult;
+    use crate::parser::error::IntoWplCodeError;
+    use crate::parser::error::WplCodeResult;
     use bytes::Bytes;
     use std::sync::Arc;
 
     use super::*;
-    use wp_model_core::raw::RawData;
-
+    
     #[test]
-    fn test_quotation() -> AnyResult<()> {
+    fn test_quotation() -> WplCodeResult<()> {
         let data = RawData::from_string(r#""hello""#.to_string());
-        let x = EscQuotaProc.process(data)?;
+        let x = EscQuotaProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(crate::eval::builtins::raw_to_utf8_string(&x), "hello");
 
         let data = RawData::from_string(r#""<14>""#.to_string());
-        let x = EscQuotaProc.process(data)?;
+        let x = EscQuotaProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(crate::eval::builtins::raw_to_utf8_string(&x), "<14>");
 
         let data = RawData::from_string(r#""{ \"a\" = 1, \"b\" = \"wparse\" }""#.to_string());
-        let x = EscQuotaProc.process(data)?;
+        let x = EscQuotaProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(
             crate::eval::builtins::raw_to_utf8_string(&x),
             r#"{ "a" = 1, "b" = "wparse" }"#
         );
 
         let data = RawData::from_string(r#""{ \"a\" = 1, \"b\" = \" 中国 \" }""#.to_string());
-        let x = EscQuotaProc.process(data)?;
+        let x = EscQuotaProc.process(data).map_err(|e| e.into_wpl_err())?;
         assert_eq!(
             crate::eval::builtins::raw_to_utf8_string(&x),
             r#"{ "a" = 1, "b" = " 中国 " }"#
@@ -88,7 +89,7 @@ mod tests {
 
         // Test with Bytes input
         let bytes_data = RawData::Bytes(Bytes::from_static(br#""hello world""#));
-        let result = EscQuotaProc.process(bytes_data)?;
+        let result = EscQuotaProc.process(bytes_data).map_err(|e| e.into_wpl_err())?;
         assert!(matches!(result, RawData::Bytes(_)));
         assert_eq!(
             crate::eval::builtins::raw_to_utf8_string(&result),
@@ -99,7 +100,7 @@ mod tests {
         let arc_data = RawData::ArcBytes(Arc::from(
             r#""test with \"quotes\" and \backslash""#.as_bytes().to_vec(),
         ));
-        let result = EscQuotaProc.process(arc_data)?;
+        let result = EscQuotaProc.process(arc_data).map_err(|e| e.into_wpl_err())?;
         assert!(matches!(result, RawData::ArcBytes(_)));
         assert_eq!(
             crate::eval::builtins::raw_to_utf8_string(&result),

@@ -3,7 +3,7 @@ use crate::eval::runtime::field::FieldEvalUnit;
 use crate::eval::value::parse_def::*;
 use crate::generator::{FieldGenConf, GenScopeEnum};
 use crate::generator::{GenChannel, ParserValue};
-use crate::types::AnyResult;
+use crate::parser::error::WplCodeResult;
 use rand::RngExt;
 use winnow::ascii::multispace0;
 use winnow::ascii::{Caseless, hex_uint};
@@ -49,7 +49,7 @@ impl PatternParser for HexDigitP {
         gnc: &mut GenChannel,
         f_conf: &WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         let range = if let Some(Some(GenScopeEnum::Digit(digit))) = g_conf.map(|c| &c.scope) {
             let beg: u32 = digit.beg as u32;
             let end: u32 = digit.end as u32;
@@ -66,15 +66,15 @@ impl PatternParser for HexDigitP {
 mod tests {
 
     use crate::ast::{WplField, WplSep};
-    use crate::types::AnyResult;
-    use orion_error::TestAssert;
+    use crate::parser::error::WplCodeResult;
+    use orion_error::testcase::TestAssert;
 
     use super::*;
     use crate::eval::runtime::field::FieldEvalUnit;
     use crate::eval::value::test_utils::ParserTUnit;
 
     #[test]
-    fn test_hex() -> AnyResult<()> {
+    fn test_hex() -> WplCodeResult<()> {
         let conf = WplField::default();
         let ups_sep = WplSep::default();
         let parser = HexDigitP::default();

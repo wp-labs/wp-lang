@@ -108,7 +108,7 @@ pub(crate) fn wpl_field_vec(input: &mut &str) -> wp_primitives::WResult<Vec<WplF
 mod tests {
     use super::*;
     use crate::parser::wpl_rule;
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
 
     #[test]
     fn tes_parse_multi_fields() {

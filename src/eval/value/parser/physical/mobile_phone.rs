@@ -38,7 +38,7 @@ impl PatternParser for MobilePhoneP {
         _gen: &mut GenChannel,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         unimplemented!("phone generate");
     }
 }
@@ -47,7 +47,7 @@ impl PatternParser for MobilePhoneP {
 mod tests {
     use super::*;
     use crate::eval::value::test_utils::ParserTUnit;
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
 
     #[test]
     fn test_parse_mobile() {

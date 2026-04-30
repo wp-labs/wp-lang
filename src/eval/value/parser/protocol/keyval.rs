@@ -5,6 +5,7 @@ use crate::eval::runtime::field::FieldEvalUnit;
 use crate::eval::value::parse_def::PatternParser;
 use crate::eval::value::parser::physical::foundation::gen_chars;
 use crate::eval::value::parser::{ParserFactory, protocol};
+use crate::parser::error::IntoWplCodeError;
 use crate::parser::utils::{quot_r_str, quot_str, take_kv_key, window_path};
 use wp_model_core::model::FNameStr;
 derive_base_prs!(KeyValP);
@@ -37,10 +38,10 @@ impl PatternParser for KeyValP {
         gnc: &mut GenChannel,
         f_conf: &WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         let key = gen_chars(gnc, 3, false);
         if let Some(conf) = g_conf {
-            let meta = DataType::from(&conf.gen_type)?;
+            let meta = DataType::from(&conf.gen_type).map_err(|e| e.into_wpl_err())?;
             let parser = ParserFactory::create(&meta)?;
             let sep = f_conf.resolve_sep(&WplSep::default());
             let field = parser.generate(gnc, &sep, f_conf, Some(conf))?;
@@ -120,8 +121,8 @@ mod tests {
     use crate::ast::WplField;
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::eval::value::test_utils::ParserTUnit;
-    use crate::types::AnyResult;
-    use orion_error::TestAssert;
+    use crate::parser::error::WplCodeResult;
+    use orion_error::testcase::TestAssert;
     use wp_model_core::model::DataRecord;
 
     use super::*;
@@ -134,7 +135,7 @@ mod tests {
     */
 
     #[test]
-    fn test_key_name() -> AnyResult<()> {
+    fn test_key_name() -> WplCodeResult<()> {
         let mut data = r#"destination-zone="tr\"ust""#;
         let conf = WplField::try_parse(r#"kv(@destination-zone)"#).assert();
         let field = ParserTUnit::from_auto(conf).verify_parse_suc_meta(&mut data, DataType::Chars);
@@ -172,7 +173,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_key_2() -> AnyResult<()> {
+    fn test_key_2() -> WplCodeResult<()> {
         let mut data = "sys_name : 幻云 , msg_type:attack_log";
         let conf = WplField::try_parse(r#"kv(@sys_name)\,"#).assert();
         let field = ParserTUnit::new(KeyValP::default(), conf)
@@ -187,7 +188,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_key_3() -> AnyResult<()> {
+    fn test_key_3() -> WplCodeResult<()> {
         let conf = WplField::try_parse(r#"kv(@time)"#).assert();
         let mut data = r#"time="2023-05-15 09:22:44" "#;
         let field = ParserTUnit::new(KeyValP::default(), conf)
@@ -203,7 +204,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_key_4() -> AnyResult<()> {
+    fn test_key_4() -> WplCodeResult<()> {
         let mut data = r#"   pid:666, asid:100028"#;
         let conf = WplField::try_parse(r#"kv(@pid)\,,kv(@asid)\,"#).assert();
         let field = ParserTUnit::new(KeyValP::default(), conf)
@@ -215,56 +216,56 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_kv_arr1() -> AnyResult<()> {
+    fn test_kv_arr1() -> WplCodeResult<()> {
         let data = r#"dip=["1.1.1.1","2.2.2.2"]"#;
         let rule = r#" rule x { (kv(array/chars@dip))}"#;
         let pipe = WplEvaluator::from_code(rule)?;
 
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0)?;
+        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
 
         Ok(())
     }
     #[test]
-    fn test_kv_arr2() -> AnyResult<()> {
+    fn test_kv_arr2() -> WplCodeResult<()> {
         let data = r#"dip=[1.1.1.1,2.2.2.2]"#;
         let rule = r#" rule x { (kv(array/ip@dip))}"#;
         let pipe = WplEvaluator::from_code(rule)?;
 
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0)?;
+        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         Ok(())
     }
 
     #[test]
-    fn test_kv_arr3() -> AnyResult<()> {
+    fn test_kv_arr3() -> WplCodeResult<()> {
         let data = r#"dip=[]"#;
         let rule = r#" rule x { (kv(array/ip@dip))}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0)?;
+        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         assert!(tdc.field("dip").is_some());
 
         let rule = r#" rule x { (kv(array/ip@dip))}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0)?;
+        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         assert!(tdc.field("dip").is_some());
         Ok(())
     }
 
     #[test]
-    fn test_kv_arr4() -> AnyResult<()> {
+    fn test_kv_arr4() -> WplCodeResult<()> {
         let data = r#"d=["1","1"]|e=["2","2"]|a= []|b=["3","3"]"#;
         let rule = r#" rule x { some_of(kv(array/chars))\| }"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0)?;
+        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         Ok(())
     }
     /*
     #[test]
-    fn test_key_5() -> AnyResult<()> {
+    fn test_key_5() -> WplCodeResult<()> {
         let rule = r#"rule x {(kv(digit@message_type),chars<skyeye_login {,>,kv, chars\} ) } "#;
         let pipe = LangPipe::from_code(rule)?;
         Ok(())
@@ -272,7 +273,7 @@ mod tests {
 
      */
     #[test]
-    fn test_key_point() -> AnyResult<()> {
+    fn test_key_point() -> WplCodeResult<()> {
         let mut data =
             r#"detail.sha256="2e7d8e43f518d2f2e54676069510bf48aa2289ca19c0f4165a1b6d4c18351ac9""#;
         let conf = WplField::try_parse(r#"kv"#).assert();
@@ -301,12 +302,12 @@ mod tests {
     }
 
     #[test]
-    fn test_key_diy_sep() -> AnyResult<()> {
+    fn test_key_diy_sep() -> WplCodeResult<()> {
         let data = r#"x.a="hello"!|x.b="18"!|x.c=20"#;
         let rule = r#" rule x { (kv(chars@x.a:y.a),kv(chars@x.b),kv(digit@x.c))\!\|} "#;
         let pipe = WplEvaluator::from_code(rule)?;
 
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0)?;
+        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
         let expected = vec![
             DataField::from_chars("y.a".to_string(), "hello".to_string()),
             DataField::from_chars("x.b".to_string(), "18".to_string()),
@@ -319,12 +320,12 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_kv_chars2() -> AnyResult<()> {
+    fn test_kv_chars2() -> WplCodeResult<()> {
         let rule = r#" rule x {(chars:content), some_of( kv(chars<",">@event_content) ) } "#;
         let data = r#""主机172.16.12.20存在可疑进程参数问题，进程fscan_amd64的启动参数为./fscan_amd64 -h 172.16.12.0/24，符合可疑进程参数的特性。" event_content="主机172.16.12.20存在可疑进程参数问题，进程fscan_amd64的启动参数为./fscan_amd64 -h 172.16.12.0/24，符合可疑进程参数的特性。"
 "#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0)?;
+        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         assert_eq!(
             tdc.get_field_owned("content"),
@@ -345,13 +346,13 @@ mod tests {
     }
 
     #[test]
-    fn test_kv_chars1() -> AnyResult<()> {
+    fn test_kv_chars1() -> WplCodeResult<()> {
         let rule = r#" rule x {(chars:a\\\s), some_of( kv(chars@b), ), (json()) } "#;
         //let rule = r#" rule x {(chars:a, kv(chars@b),  json) } "#;
         //let rule = r#" rule x {(chars:a, kv,  json) } "#;
         let data = r#"sddD:\招标项目\6-MSS\mss日志映射表 b="sddD:\招标项目\6-MSS\mss日志映射表" {"c":"sddD:\\招标项目\\6-MSS\\mss日志映射表"}"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0)?;
+        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         assert_eq!(
             tdc.get_field_owned("b"),
@@ -371,11 +372,11 @@ mod tests {
     }
 
     #[test]
-    fn test_kv_runtime_key_with_parentheses() -> AnyResult<()> {
+    fn test_kv_runtime_key_with_parentheses() -> WplCodeResult<()> {
         let rule = r#"rule test { (kv(@protocal(80))) }"#;
         let data = r#"protocal(80)=tcp"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (record, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0)?;
+        let (record, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
         assert_eq!(
             record.field("protocal(80)").map(|s| s.as_field()),
             Some(&DataField::from_chars("protocal(80)", "tcp"))
@@ -384,11 +385,11 @@ mod tests {
     }
 
     #[test]
-    fn test_kv_runtime_keys_with_brackets_angles_braces() -> AnyResult<()> {
+    fn test_kv_runtime_keys_with_brackets_angles_braces() -> WplCodeResult<()> {
         let rule = r#"rule test { (kv,kv,kv)\s }"#;
         let data = r#"arr[0]=true list<int>=100 set{a}=value"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (record, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0)?;
+        let (record, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
 
         assert_eq!(
             record.field("arr[0]").map(|s| s.as_field()),
@@ -406,15 +407,15 @@ mod tests {
     }
 
     #[test]
-    fn test_kv_multi_keys() -> AnyResult<()> {
+    fn test_kv_multi_keys() -> WplCodeResult<()> {
         let rule = r#" rule x { (kv,kv(digit),kv(digit@x.c, digit@x.c1:x.c))\!\|} "#;
         let data = r#"x.a="hello"!|x.b=18!|x.c=20"#;
         let pipe = WplEvaluator::from_code(rule)?;
 
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0)?;
+        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
         asert_kv_x_obj(tdc);
         let data = r#"x.a="hello"!|x.b=18!|x.c1=20"#;
-        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0)?;
+        let (tdc, _) = pipe.proc(0, RawData::from_string(data.to_string()), 0).map_err(|e| e.into_wpl_err())?;
         asert_kv_x_obj(tdc);
         Ok(())
     }
@@ -432,7 +433,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kv_bracket_key() -> AnyResult<()> {
+    fn test_kv_bracket_key() -> WplCodeResult<()> {
         let mut data = r#"fn(arg)="hello""#;
         let conf = WplField::try_parse(r#"kv"#).assert();
         let field = ParserTUnit::new(KeyValP::default(), conf)

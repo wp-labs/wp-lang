@@ -29,14 +29,14 @@ impl LogicProc for GroupOpt {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::AnyResult;
+    use crate::parser::error::WplCodeResult;
     use crate::{WplEvaluator, wpl_express};
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
     use std::net::{IpAddr, Ipv4Addr};
     use wp_model_core::model::DataField;
     use wp_primitives::Parser;
     #[test]
-    fn test_opt_group_1() -> AnyResult<()> {
+    fn test_opt_group_1() -> WplCodeResult<()> {
         let express = wpl_express.parse(r#"opt(ip:sip),(2*_,time<[,]>)"#).assert();
         let mut data = r#"192.168.1.2 - - [06/Aug/2019:12:12:19 +0800] "#;
         let ppl = WplEvaluator::from(&express, None)?;
@@ -59,7 +59,7 @@ mod tests {
     }
 
     #[test]
-    fn test_opt_group_2() -> AnyResult<()> {
+    fn test_opt_group_2() -> WplCodeResult<()> {
         let express = wpl_express.parse(r#"(ip:sip) ,opt(ip:sip)"#).assert();
         let mut data = r#"192.168.1.2"#;
         let ppl = WplEvaluator::from(&express, None)?;

@@ -86,7 +86,7 @@ impl PatternParser for KvArrP {
         _gen: &mut GenChannel,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         unimplemented!("kvarr generate")
     }
 }
@@ -312,17 +312,18 @@ impl KvArrP {
 
 #[cfg(test)]
 mod tests {
+    use crate::parser::error::IntoWplCodeError;
     use std::{net::IpAddr, str::FromStr};
 
     use super::*;
     use crate::eval::value::test_utils::ParserTUnit;
-    use crate::types::AnyResult;
+    use crate::parser::error::WplCodeResult;
     use crate::{WplEvaluator, ast::WplField};
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
     use wp_model_core::model::{DataField, DataRecord, data::Field};
 
     #[test]
-    fn test_kvarr_with_commas() -> AnyResult<()> {
+    fn test_kvarr_with_commas() -> WplCodeResult<()> {
         let conf = WplField::try_parse("kvarr(ip@sip, digit@cnt)").assert();
         let mut data = "sip=\"192.168.1.1\", cnt=42";
         let parser = ParserTUnit::new(KvArrP::default(), conf);
@@ -345,7 +346,7 @@ mod tests {
         alt((take_until(0.., ","), rest)).parse_next(data)
     }
     #[test]
-    fn test_kvarr_with_commas2() -> AnyResult<()> {
+    fn test_kvarr_with_commas2() -> WplCodeResult<()> {
         let mut data = "msg = hello boy,cnt=42";
         assert!(take_to_sep(&mut data).is_ok());
 
@@ -376,7 +377,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kvarr_whitespace_delimited() -> AnyResult<()> {
+    fn test_kvarr_whitespace_delimited() -> WplCodeResult<()> {
         let conf = WplField::try_parse("kvarr(chars@a, chars@b, digit@c)\\s").assert();
         let mut data = "a=\"foo\" b='bar x' c=1";
         let parser = ParserTUnit::new(KvArrP::default(), conf);
@@ -392,11 +393,11 @@ mod tests {
     }
 
     #[test]
-    fn test_kvarr_fun() -> AnyResult<()> {
+    fn test_kvarr_fun() -> WplCodeResult<()> {
         let rule = r#"rule test { (kvarr(chars@a, chars@b, digit@c)\s | f_chars_has(a,foo) ) }"#;
         let data = "a=\"foo\" b=bar c=1";
         let pipe = WplEvaluator::from_code(rule)?;
-        let (record, _) = pipe.proc(0, data, 0)?;
+        let (record, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         let expected_a = DataField::from_chars("a", "foo");
         assert_eq!(record.field("a").map(|s| s.as_field()), Some(&expected_a));
         let rule = r#"rule test { (kvarr(chars@a, chars@b, digit@c)\s | f_chars_has(a,foox) ) }"#;
@@ -406,7 +407,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kvarr_duplicate_keys_to_array() -> AnyResult<()> {
+    fn test_kvarr_duplicate_keys_to_array() -> WplCodeResult<()> {
         let conf = WplField::try_parse("kvarr(chars@tag, digit@count)\\s").assert();
         let mut data = "tag=alpha tag=beta count=3";
         let parser = ParserTUnit::new(KvArrP::default(), conf);
@@ -431,7 +432,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kvarr_repeated_keys_are_indexed() -> AnyResult<()> {
+    fn test_kvarr_repeated_keys_are_indexed() -> WplCodeResult<()> {
         let conf = WplField::try_parse("kvarr(chars@tag)\\s").assert();
         let mut data = "tag=alpha tag=beta tag=gamma";
         let parser = ParserTUnit::new(KvArrP::default(), conf);
@@ -456,7 +457,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kvarr_type_inference() -> AnyResult<()> {
+    fn test_kvarr_type_inference() -> WplCodeResult<()> {
         let conf = WplField::try_parse("kvarr(bool@flag, float@ratio, chars@raw)\\s").assert();
         let mut data = "flag=true ratio=1.25 raw=value";
         let parser = ParserTUnit::new(KvArrP::default(), conf);
@@ -481,7 +482,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kvarr_ignore_meta() -> AnyResult<()> {
+    fn test_kvarr_ignore_meta() -> WplCodeResult<()> {
         let conf = WplField::try_parse("kvarr(_@note, digit@count)\\s").assert();
         let mut data = "note=something count=7";
         let parser = ParserTUnit::new(KvArrP::default(), conf);
@@ -501,7 +502,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kvarr_pattern_sep() -> AnyResult<()> {
+    fn test_kvarr_pattern_sep() -> WplCodeResult<()> {
         // kvarr with pattern separator {\s(\S=)} for space-containing values
         let conf = WplField::try_parse("kvarr{\\s(\\S=)}").assert();
         let mut data = "msg=Test message externalId=0";
@@ -522,7 +523,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kvarr_pattern_sep_multi_pairs() -> AnyResult<()> {
+    fn test_kvarr_pattern_sep_multi_pairs() -> WplCodeResult<()> {
         // Multiple kv pairs with space-containing values
         let conf = WplField::try_parse("kvarr{\\s(\\S=)}").assert();
         let mut data = "msg=This is a long message severity=high source=firewall action=allow";
@@ -549,7 +550,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kvarr_pattern_sep_interval_prefix_value() -> AnyResult<()> {
+    fn test_kvarr_pattern_sep_interval_prefix_value() -> WplCodeResult<()> {
         let conf = WplField::try_parse("kvarr{,\\s(\\S=)}").assert();
         let mut data = "command=() aaa, action=permit";
         let parser = ParserTUnit::new(KvArrP::default(), conf);
@@ -567,7 +568,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kvarr_bracket_keys() -> AnyResult<()> {
+    fn test_kvarr_bracket_keys() -> WplCodeResult<()> {
         let conf = WplField::try_parse("kvarr\\,").assert();
         let mut data = "fn(arg)=\"hello\", list<int>=100, arr[0]=true, set{a}=value";
         let parser = ParserTUnit::new(KvArrP::default(), conf);
@@ -593,7 +594,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kvarr_bracket_keys_with_sub_fields() -> AnyResult<()> {
+    fn test_kvarr_bracket_keys_with_sub_fields() -> WplCodeResult<()> {
         let conf =
             WplField::try_parse("kvarr(bool@arr[0], digit@list<int>, chars@set{a})\\,").assert();
         let mut data = "arr[0]=true, list<int>=100, set{a}=value";
@@ -616,11 +617,11 @@ mod tests {
     }
 
     #[test]
-    fn test_kvarr_runtime_keys_with_brackets_angles_braces() -> AnyResult<()> {
+    fn test_kvarr_runtime_keys_with_brackets_angles_braces() -> WplCodeResult<()> {
         let rule = r#"rule test { (kvarr\,) }"#;
         let data = r#"arr[0]=true, list<int>=100, set{a}=value"#;
         let pipe = WplEvaluator::from_code(rule)?;
-        let (record, _) = pipe.proc(0, data, 0)?;
+        let (record, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         assert_eq!(
             record.field("arr[0]").map(|s| s.as_field()),
             Some(&DataField::from_bool("arr[0]", true))

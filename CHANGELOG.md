@@ -1,8 +1,31 @@
 # Changelog
 
-## 0.1.7 - 2026-04-12
+## [0.2.0 Unreleased]
+
+### Changed
+- **Error handling**: Replace `anyhow::Result` with structured `WplCodeError` / `WplCodeResult` based on `orion-error::StructError<WplCodeReason>`, providing stable error codes and categories for all parse and runtime paths.
+- **Dependencies**: Upgrade `orion-error` 0.6 → 0.7, `wp-parse-api` 0.8 → 0.9, `wp-connector-api` 0.8 → 0.9, `wp-error` 0.8 → 0.9, `wp-specs` 0.8 → 0.9, `ipnet` 2.11 → 2.12; remove `anyhow` dependency.
+- **orion-error API migration**: Migrate error-building callsites from `.want()` / `.with()` to `.doing()` / `.with_context()` to match orion-error 0.7 API.
+
+### Added
+- **`WplEvaluator::proc_ref()`**: New method that borrows `&RawData` and only clones when preorder pipes are non-empty, eliminating per-rule payload clone on the multi-rule error path (~7% throughput improvement).
+- **Preview truncation**: Long input truncated to 80 characters in parse-error detail messages, reducing error-string allocation cost for large payloads.
+- **Multi-rule error benchmark**: New `benches/multi_rule_error.rs` comparing `proc()` vs `proc_ref()` across 5–30 failing rules, plus partial-match scenarios.
+- **Performance analysis doc**: `docs/benchmark/parse-error-performance.md` with benchmark methodology, results, and baseline comparison workflow.
+- **Baseline snapshot**: `docs/benchmark/baselines/v1-proc_ref/` committed for future performance regression comparison via `cargo bench -- --baseline v1-proc_ref`.
+
+### Fixed
+- **Parser refactor**: Various parser functions updated to work with the new error types and orion-error 0.7 API.
+
+## [0.1.9] - 2026-04-12
 - Vendor the `idcard` implementation into `wp-lang/src/idcard`, removing the external `idcard` crate dependency while preserving the existing mainland / Hong Kong / Macau / Taiwan identity-card validation and fake-data helpers used by the runtime parser.
 - Keep the physical `id_card` parser behavior unchanged while switching it to the new in-crate implementation, so downstream users no longer pull the legacy `idcard` dependency graph into `wp-lang`.
+
+## [0.1.8] - 2026-04-03
+- Fix `group` pipe so the selected field is preserved through the pipe output instead of being silently dropped.
+
+## [0.1.7] - 2026-04-01
+- Fix `bad_json` matching to tighten detection so JSON-like inputs that fail strict parsing are correctly classified without false positives.
 
 ## 0.1.6 - 2026-03-31
 - Add the preorder `json_like` pipe for lightweight JSON-like sniffing before full parsing, plus coverage for plain text, valid JSON, and broken JSON-like payloads.

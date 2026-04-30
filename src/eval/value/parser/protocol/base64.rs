@@ -51,14 +51,14 @@ impl FieldParser for Base64P {
         _ups_sep: &WplSep,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<FmtField> {
+    ) -> WplCodeResult<FmtField> {
         unimplemented!("base64 generate");
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
     use wp_model_core::model::DataType::Base64;
 
     use crate::eval::value::test_utils::ParserTUnit;

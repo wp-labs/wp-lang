@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::generator::FieldGenConf;
 use crate::generator::{FmtField, GenChannel};
-use crate::types::AnyResult;
+use crate::parser::error::WplCodeResult;
 use wp_model_core::model::DataField;
 use wp_model_core::model::FNameStr;
 use wp_primitives::WResult as ModalResult;
@@ -27,7 +27,7 @@ pub trait FieldParser {
         ups_sep: &WplSep,
         f_conf: &WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<FmtField>;
+    ) -> WplCodeResult<FmtField>;
 }
 
 pub trait PatternParser {
@@ -46,7 +46,7 @@ pub trait PatternParser {
         gnc: &mut GenChannel,
         f_conf: &WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField>;
+    ) -> WplCodeResult<DataField>;
 }
 
 // Parser holders must be usable across threads to allow multi-threaded execution.

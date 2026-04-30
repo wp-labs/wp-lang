@@ -65,7 +65,7 @@ impl FieldParser for CombinedParser {
         _ups_sep: &WplSep,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<FmtField> {
+    ) -> WplCodeResult<FmtField> {
         unreachable!("Combine Parses not generate")
     }
 }

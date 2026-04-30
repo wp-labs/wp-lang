@@ -140,7 +140,7 @@ impl WplEvalGroup {
 
 #[cfg(test)]
 mod tests {
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
     use wp_primitives::Parser;
 
     use crate::ast::WplSep;
@@ -148,12 +148,13 @@ mod tests {
     use crate::eval::value::parser::ParserFactory;
     use crate::generator::{FmtFieldVec, GenChannel};
     use crate::parser::parse_code::wpl_express;
-    use crate::types::AnyResult;
+    use crate::parser::error::WplCodeResult;
+    use crate::parser::error::IntoWplCodeError;
     use wp_model_core::model::DataType;
     use wp_model_core::model::Value;
 
     #[test]
-    fn test_pipeline() -> AnyResult<()> {
+    fn test_pipeline() -> WplCodeResult<()> {
         let express = wpl_express
             .parse(r#"(chars<[,]> | (ip,_,time ) )"#)
             .assert();
@@ -167,7 +168,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_pipeline2() -> AnyResult<()> {
+    fn test_pipeline2() -> WplCodeResult<()> {
         let express = wpl_express
             .parse(r#"(chars<[,]> | (ip, time)\, )"#)
             .assert();
@@ -181,7 +182,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_pipeline3() -> AnyResult<()> {
+    fn test_pipeline3() -> WplCodeResult<()> {
         let express = wpl_express
             .parse(r#"(kv(chars<[,]> | (ip,_,time ) ))"#)
             .assert();
@@ -197,7 +198,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pipeline4() -> AnyResult<()> {
+    fn test_pipeline4() -> WplCodeResult<()> {
         let express = wpl_express
             .parse(r#"(json(chars@data<[,]> | (ip,_,time ) ))"#)
             .assert();
@@ -211,14 +212,14 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_gen() -> AnyResult<()> {
+    fn test_gen() -> WplCodeResult<()> {
         let rule = wpl_express.parse(r#"(ip,time,kv)"#).assert();
         let mut fieldset = FmtFieldVec::new();
         let sep = WplSep::default();
         for group in &rule.group {
             for f_conf in &group.fields {
                 let mut ch = GenChannel::new();
-                let meta = DataType::from(f_conf.meta_name.as_str())?;
+                let meta = DataType::from(f_conf.meta_name.as_str()).map_err(|e| e.into_wpl_err())?;
                 let parser = ParserFactory::create(&meta)?;
                 let field = parser.generate(&mut ch, &sep, f_conf, None)?;
                 fieldset.push(field);
@@ -237,7 +238,7 @@ mod tests {
     }
 
     #[test]
-    fn test_group_sep_and_field_sep_precedence() -> AnyResult<()> {
+    fn test_group_sep_and_field_sep_precedence() -> WplCodeResult<()> {
         // 组分隔符（mid）作用于组内全部字段
         let express = wpl_express.parse(r#"(chars:a, chars:b)\|"#).assert();
         let mut data = r#"foo|bar"#;

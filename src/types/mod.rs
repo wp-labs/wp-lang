@@ -1,4 +1,3 @@
-pub type AnyResult<T> = anyhow::Result<T>;
 mod wild_map;
 
 // Keep WildMap as language-internal

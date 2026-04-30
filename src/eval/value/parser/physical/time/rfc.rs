@@ -4,7 +4,7 @@ use crate::eval::runtime::field::FieldEvalUnit;
 use crate::eval::value::parse_def::PatternParser;
 use crate::eval::value::parser::physical::time::gen_time;
 use crate::generator::{FieldGenConf, GenChannel};
-use crate::types::AnyResult;
+use crate::parser::error::WplCodeResult;
 use crate::winnow::Parser;
 use chrono::format::Fixed;
 use chrono::{Datelike, NaiveDate, NaiveTime};
@@ -358,7 +358,7 @@ impl PatternParser for TimeP {
         gnc: &mut GenChannel,
         f_conf: &crate::ast::WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         gen_time(gnc, f_conf, g_conf)
     }
 }
@@ -382,7 +382,7 @@ impl PatternParser for TimeISOP {
         gnc: &mut GenChannel,
         f_conf: &crate::ast::WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         gen_time(gnc, f_conf, g_conf)
     }
 }
@@ -403,7 +403,7 @@ impl PatternParser for TimeRFC3339 {
         g: &mut GenChannel,
         f: &crate::ast::WplField,
         c: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         gen_time(g, f, c)
     }
 }
@@ -426,7 +426,7 @@ impl PatternParser for TimeRFC2822 {
         gnc: &mut GenChannel,
         f_conf: &crate::ast::WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         gen_time(gnc, f_conf, g_conf)
     }
 }

@@ -48,7 +48,7 @@ impl PatternParser for MethodP {
         _gen: &mut GenChannel,
         f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         use smol_str::SmolStr;
         Ok(DataField::from_chars(
             f_conf.safe_name(),
@@ -112,7 +112,7 @@ impl PatternParser for RequestP {
         _gen: &mut GenChannel,
         f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         use smol_str::SmolStr;
         let data = "GET /index  HTTP/1.1 ";
         Ok(DataField::from_chars(
@@ -151,7 +151,7 @@ impl PatternParser for StatusP {
         _gen: &mut GenChannel,
         f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         Ok(DataField::from_digit(f_conf.safe_name(), 200))
     }
 }
@@ -208,7 +208,7 @@ impl PatternParser for AgentP {
         _gen: &mut GenChannel,
         f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         use smol_str::SmolStr;
         let agent = r#"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"#;
         Ok(DataField::from_chars(
@@ -222,13 +222,14 @@ impl PatternParser for AgentP {
 mod tests {
     use crate::ast::fld_fmt::for_test::fdc2;
     use crate::eval::value::test_utils::{ParserTUnit, ParserTestEnv, verify_gen_parse};
-    use crate::types::AnyResult;
-    use orion_error::TestAssert;
+    use crate::parser::error::WplCodeResult;
+    use crate::parser::error::IntoWplCodeError;
+    use orion_error::testcase::TestAssert;
 
     use super::*;
 
     #[test]
-    fn test_request() -> AnyResult<()> {
+    fn test_request() -> WplCodeResult<()> {
         let mut data = "GET /hello.png HTTP/1.1 ";
         let _ = ParserTUnit::new(
             RequestP::default(),
@@ -245,7 +246,7 @@ mod tests {
     }
 
     #[test]
-    fn test_http_methods_extended() -> AnyResult<()> {
+    fn test_http_methods_extended() -> WplCodeResult<()> {
         let conf = WplField::try_parse("http/method").assert();
         for mut data in [
             "HEAD", "OPTIONS", "PATCH", "TRACE", "CONNECT", "POST", "PUT", "GET",
@@ -283,7 +284,7 @@ mod tests {
     }
 
     #[test]
-    fn test_agent() -> AnyResult<()> {
+    fn test_agent() -> WplCodeResult<()> {
         let mut data = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 \
         (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36";
         ParserTUnit::new(
@@ -296,22 +297,22 @@ mod tests {
     }
 
     #[test]
-    fn test_http_gen() -> AnyResult<()> {
+    fn test_http_gen() -> WplCodeResult<()> {
         let mut env = ParserTestEnv::new();
-        let conf = fdc2("http/request", ",")?;
+        let conf = fdc2("http/request", ",").map_err(|e| e.into_wpl_err())?;
         //shm.end_conf.scope_beg = Some("\"".into());
         //shm.end_conf.scope_end = Some("\"".into());
         let parser = RequestP::default();
         let fpu = FieldEvalUnit::for_test(parser, conf.clone());
         verify_gen_parse(&mut env, &fpu, &conf);
 
-        let conf = fdc2("http/agent", ",")?;
+        let conf = fdc2("http/agent", ",").map_err(|e| e.into_wpl_err())?;
         //shm.end_conf.scope_beg = Some("\"".into());
         //shm.end_conf.scope_end = Some("\"".into());
         let parser = AgentP::default();
         let fpu = FieldEvalUnit::for_test(parser, conf.clone());
         verify_gen_parse(&mut env, &fpu, &conf);
-        let conf = fdc2("http/method", ",")?;
+        let conf = fdc2("http/method", ",").map_err(|e| e.into_wpl_err())?;
         let parser = MethodP::default();
         let fpu = FieldEvalUnit::for_test(parser, conf.clone());
         verify_gen_parse(&mut env, &fpu, &conf);

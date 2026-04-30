@@ -36,11 +36,12 @@ impl wp_parse_api::PipeProcessor for JsonLikeProc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::AnyResult;
+    use crate::parser::error::WplCodeResult;
     use wp_parse_api::PipeProcessor;
 
     const UNKNOWN_JSON_SAMPLE: &str = include_str!("../../../tests/unknow.json");
 
+    use crate::parser::error::IntoWplCodeError;
     #[test]
     fn json_like_matches_valid_and_broken_json_objects() {
         assert!(is_json_like_text(r#"{"a":1}"#));
@@ -54,9 +55,9 @@ mod tests {
     }
 
     #[test]
-    fn json_like_pipe_preserves_input() -> AnyResult<()> {
+    fn json_like_pipe_preserves_input() -> WplCodeResult<()> {
         let raw = RawData::from_string(UNKNOWN_JSON_SAMPLE.to_string());
-        let out = JsonLikeProc.process(raw)?;
+        let out = JsonLikeProc.process(raw).map_err(|e| e.into_wpl_err())?;
         assert_eq!(raw_to_utf8_string(&out), UNKNOWN_JSON_SAMPLE);
         Ok(())
     }

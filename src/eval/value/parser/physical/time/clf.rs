@@ -2,7 +2,7 @@ use super::common::fast_apache_dt;
 use crate::eval::runtime::field::FieldEvalUnit;
 use crate::eval::value::parse_def::PatternParser;
 use crate::generator::{FieldGenConf, GenChannel};
-use crate::types::AnyResult;
+use crate::parser::error::WplCodeResult;
 use winnow::stream::Stream as _;
 use wp_model_core::model::DataField;
 use wp_model_core::model::FNameStr;
@@ -36,7 +36,7 @@ impl PatternParser for TimeCLF {
         gnc: &mut GenChannel,
         f_conf: &crate::ast::WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         super::gen_time(gnc, f_conf, g_conf)
     }
 }

@@ -4,7 +4,7 @@ use crate::eval::value::field_parse::FieldParse;
 use crate::eval::value::parse_def::{FieldParser, PatternParser};
 use crate::generator::FieldGenConf;
 use crate::generator::{FmtField, GenChannel};
-use crate::types::AnyResult;
+use crate::parser::error::WplCodeResult;
 use crate::winnow::Parser;
 use wp_model_core::model::FNameStr;
 use wp_model_core::model::{DataField, DataType};
@@ -115,7 +115,7 @@ where
         ups_sep: &WplSep,
         f_conf: &WplField,
         g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<FmtField> {
+    ) -> WplCodeResult<FmtField> {
         let field = self.patten_gen(gnc, f_conf, g_conf)?;
         let sep = f_conf.resolve_sep(ups_sep);
         Ok(FmtField::new(

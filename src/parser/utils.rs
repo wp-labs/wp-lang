@@ -537,7 +537,7 @@ mod tests {
     use crate::parser::error::error_detail;
     use crate::parser::utils::{quot_str, take_key, take_kv_key, take_parentheses, take_to_end};
     use crate::parser::wpl_pkg::wpl_package;
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
     use winnow::LocatingSlice;
     use wp_primitives::WResult as ModalResult;
 

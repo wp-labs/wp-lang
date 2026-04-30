@@ -9,7 +9,10 @@ use crate::parser::wpl_pkg::wpl_package;
 use crate::parser::wpl_rule::wpl_rule;
 use crate::winnow::Parser;
 use derive_getters::Getters;
-use orion_error::{ErrorOwe, ErrorWith, ToStructError, UvsFrom};
+use orion_error::UvsFrom;
+use orion_error::compat_traits::ErrorOweBase;
+use orion_error::conversion::ToStructError;
+use orion_error::ErrorWith;
 use wp_primitives::comment::CommentParser;
 
 #[derive(Debug, Clone, Getters)]
@@ -77,8 +80,8 @@ impl WplCode {
         let mut buffer = Vec::with_capacity(10240);
         let mut f = File::open(wpl_file.clone())
             //.with_context(|| format!("conf file not found: {:?}", wpl_file))
-            .owe_conf()
-            .with(wpl_file.as_ref())?;
+            .owe(WplCodeReason::from_conf())
+            .at(wpl_file.as_ref())?;
         //.owe_conf::<WPLCodeError>()?;
         f.read_to_end(&mut buffer).expect("read conf file error");
         let file_data = String::from_utf8(buffer).expect("conf file is not utf8");

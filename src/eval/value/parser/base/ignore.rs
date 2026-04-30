@@ -1,7 +1,7 @@
 use super::super::prelude::*;
 use crate::generator::FieldGenConf;
 use crate::generator::GenChannel;
-use crate::types::AnyResult;
+use crate::parser::error::WplCodeResult;
 use wp_model_core::model::DataField;
 use wp_model_core::model::FNameStr;
 use wp_primitives::Parser;
@@ -36,7 +36,7 @@ impl PatternParser for IgnoreP {
         _gen: &mut GenChannel,
         _f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
-    ) -> AnyResult<DataField> {
+    ) -> WplCodeResult<DataField> {
         unreachable!("ignore field should not generate")
     }
 }
@@ -45,7 +45,7 @@ impl PatternParser for IgnoreP {
 mod tests {
     use crate::ast::WplField;
     use crate::eval::value::test_utils::ParserTUnit;
-    use orion_error::TestAssert;
+    use orion_error::testcase::TestAssert;
 
     use super::*;
 
