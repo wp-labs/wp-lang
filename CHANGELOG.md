@@ -17,15 +17,24 @@
 ### Fixed
 - **Parser refactor**: Various parser functions updated to work with the new error types and orion-error 0.7 API.
 
+## 0.1.10 - 2026-04-16
+- Merge the `bad_json` matcher fix back into the release line so valid JSON and plain text no longer get captured as `bad_json` fallback output.
+- Include the field-level group-pipe fix from `0.1.8`, preserving the `take(...)`-selected field when a group parser is chained after a field pipe.
+- Keep the `0.1.9` in-crate `idcard` implementation changes while carrying forward the parser behavior fixes that were missing from the published `0.1.9` package.
+
 ## [0.1.9] - 2026-04-12
 - Vendor the `idcard` implementation into `wp-lang/src/idcard`, removing the external `idcard` crate dependency while preserving the existing mainland / Hong Kong / Macau / Taiwan identity-card validation and fake-data helpers used by the runtime parser.
 - Keep the physical `id_card` parser behavior unchanged while switching it to the new in-crate implementation, so downstream users no longer pull the legacy `idcard` dependency graph into `wp-lang`.
 
 ## [0.1.8] - 2026-04-03
-- Fix `group` pipe so the selected field is preserved through the pipe output instead of being silently dropped.
+- Fix field-level group pipes so they keep using the field selected by `take(...)` instead of incorrectly falling back to the last parsed field.
+- Add regression coverage for nested JSON-log parsing through `json(chars@log) | take(log) | (...)`, ensuring the second-stage group parser consumes the selected field payload.
+- Preserve the existing `take(...)` plus field-pipe behavior while fixing the `take(...)` plus group-pipe execution path.
 
 ## [0.1.7] - 2026-04-01
-- Fix `bad_json` matching to tighten detection so JSON-like inputs that fail strict parsing are correctly classified without false positives.
+- Fix `bad_json` so it only matches JSON-like payloads that fail strict JSON parsing, instead of incorrectly accepting valid JSON or plain text.
+- Add an explicit `bad_json does not match valid json input` diagnostic detail when `bad_json` is tried against valid JSON.
+- Add regression coverage for valid-JSON rejection, plain-text rejection, and the end-to-end `|json_like| -> bad_json` fallback path.
 
 ## 0.1.6 - 2026-03-31
 - Add the preorder `json_like` pipe for lightweight JSON-like sniffing before full parsing, plus coverage for plain text, valid JSON, and broken JSON-like payloads.
