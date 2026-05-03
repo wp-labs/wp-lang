@@ -38,10 +38,10 @@ fn find_conf_files(path: &str, target: &str) -> WplCodeResult<Vec<PathBuf>> {
     info_ctrl!("find conf files in: {}", path);
     let glob_path = format!("{}/**/{}", path, target);
     for entry in glob(glob_path.as_str()).map_err(|e| {
-        WplCodeError::from(WplCodeReason::Syntax(format!(
-            "read_dir fail: {}, {}",
-            path, e
-        )))
+        let msg = format!("read_dir fail: {}, {}", path, e);
+        WplCodeError::builder(WplCodeReason::Syntax)
+            .detail(msg)
+            .finish()
     })? {
         match entry {
             Ok(path) => {

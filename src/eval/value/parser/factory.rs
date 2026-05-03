@@ -1,7 +1,7 @@
 use orion_error::ErrorWith;
 use orion_error::OperationContext;
-use orion_error::compat_traits::ErrorOweBase;
 use orion_error::runtime::ContextRecord;
+use orion_error::traits_ext::ToStructError;
 
 use crate::eval::value::parse_def::{Hold, ParserHold};
 use crate::eval::value::parser::base::digit::{DigitP, FloatP};
@@ -83,9 +83,9 @@ impl ParserFactory {
         } else if DataType::Auto == *meta {
             return Self::crate_auto();
         }
-        Err(WplCodeError::from(WplCodeReason::UnSupport(
-            meta.to_string(),
-        )))
+        Err(WplCodeError::builder(WplCodeReason::UnSupport)
+            .detail(meta.to_string())
+            .finish())
         .with_context(&ctx)
     }
 
@@ -94,8 +94,21 @@ impl ParserFactory {
         ctx.record("meta", meta.to_string());
         if let DataType::Array(next_name) = meta {
             let sub_meta = DataType::from(next_name.as_str())
-                .owe(WplCodeReason::UnSupport(next_name.into()))
+                .map_err(|e| {
+                    WplCodeReason::UnSupport
+                        .to_err()
+                        .with_detail(format!("unsupported data type: {}: {}", next_name, e))
+                    //.finish()
+                })
                 .with_context(&ctx)?;
+
+            /*
+            let sub_meta = DataType::from(next_name.as_str()).map_err(|e| {
+                StructError::builder(WplCodeReason::UnSupport)
+                    .detail(format!("unsupported data type: {}: {}", next_name, e))
+                    .finish()
+            }).with_context(&ctx)?;
+            */
             match Self::create(&sub_meta) {
                 Ok(_) => Ok(Hold::new(ArrayP::new())),
                 Err(e) => Err(e),

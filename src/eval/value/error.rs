@@ -16,7 +16,10 @@ pub enum FieldError {
 
 impl IntoWplCodeError for FieldError {
     fn into_wpl_err(self) -> WplCodeError {
-        WplCodeReason::Plugin(self.to_string()).into()
+        let msg = self.to_string();
+        WplCodeError::builder(WplCodeReason::Plugin)
+            .detail(msg)
+            .finish()
     }
 }
 

@@ -1,5 +1,4 @@
 use crate::winnow::error::{ContextError, ParseError, StrContext};
-use derive_more::From;
 use orion_error::{OrionError, StructError, UvsReason};
 use serde::Serialize;
 use winnow::error::{ErrMode, Needed};
@@ -84,21 +83,24 @@ pub fn error_detail(error: ParseError<&str, ContextError<StrContext>>) -> String
     msg
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, From, OrionError)]
+#[derive(Debug, Clone, PartialEq, Serialize, OrionError)]
 pub enum WplCodeReason {
     #[orion_error(identity = "biz.plugin")]
-    #[from(skip)]
-    Plugin(String),
+    Plugin,
     #[orion_error(identity = "biz.syntax")]
-    Syntax(String),
+    Syntax,
     #[orion_error(identity = "biz.wpl_empty")]
-    #[from(skip)]
-    Empty(String),
+    Empty,
     #[orion_error(identity = "biz.unsupport")]
-    #[from(skip)]
-    UnSupport(String),
+    UnSupport,
     #[orion_error(transparent)]
     Uvs(UvsReason),
+}
+
+impl From<UvsReason> for WplCodeReason {
+    fn from(r: UvsReason) -> Self {
+        WplCodeReason::Uvs(r)
+    }
 }
 
 pub type WplCodeError = StructError<WplCodeReason>;
@@ -119,31 +121,46 @@ impl IntoWplCodeError for WplCodeError {
 
 impl IntoWplCodeError for MetaErr {
     fn into_wpl_err(self) -> WplCodeError {
-        WplCodeReason::UnSupport(self.to_string()).into()
+        let msg = self.to_string();
+        StructError::builder(WplCodeReason::UnSupport)
+            .detail(msg)
+            .finish()
     }
 }
 
 impl IntoWplCodeError for wp_parse_api::WparseError {
     fn into_wpl_err(self) -> WplCodeError {
-        WplCodeReason::Plugin(self.to_string()).into()
+        let msg = self.to_string();
+        StructError::builder(WplCodeReason::Plugin)
+            .detail(msg)
+            .finish()
     }
 }
 
 impl IntoWplCodeError for crate::idcard::Error {
     fn into_wpl_err(self) -> WplCodeError {
-        WplCodeReason::Plugin(self.to_string()).into()
+        let msg = self.to_string();
+        StructError::builder(WplCodeReason::Plugin)
+            .detail(msg)
+            .finish()
     }
 }
 
 impl IntoWplCodeError for std::string::FromUtf8Error {
     fn into_wpl_err(self) -> WplCodeError {
-        WplCodeReason::Plugin(self.to_string()).into()
+        let msg = self.to_string();
+        StructError::builder(WplCodeReason::Plugin)
+            .detail(msg)
+            .finish()
     }
 }
 
 impl IntoWplCodeError for std::net::AddrParseError {
     fn into_wpl_err(self) -> WplCodeError {
-        WplCodeReason::Plugin(self.to_string()).into()
+        let msg = self.to_string();
+        StructError::builder(WplCodeReason::Plugin)
+            .detail(msg)
+            .finish()
     }
 }
 
@@ -155,34 +172,49 @@ impl WPLCodeErrorTrait for StructError<WplCodeReason> {
     fn from_syntax(e: ErrMode<ContextError>, code: &str, path: &str) -> Self {
         match e {
             ErrMode::Incomplete(Needed::Size(u)) => {
-                StructError::from(WplCodeReason::Syntax(format!("parsing require {u}")))
+                let msg = format!("parsing require {u}");
+                StructError::builder(WplCodeReason::Syntax)
+                    .detail(msg)
+                    .finish()
             }
-            ErrMode::Incomplete(Needed::Unknown) => StructError::from(WplCodeReason::Syntax(
-                "parsing require more data".to_string(),
-            )),
+            ErrMode::Incomplete(Needed::Unknown) => {
+                let msg = "parsing require more data".to_string();
+                StructError::builder(WplCodeReason::Syntax)
+                    .detail(msg)
+                    .finish()
+            }
             ErrMode::Backtrack(e) => {
                 let where_in = split_string(code);
-                StructError::from(WplCodeReason::Syntax(format!(
+                let msg = format!(
                     ":wpl code parse fail!\n[path ]: '{}'\n[where]: '{}'\n[error]: {}",
                     path, where_in, e
-                )))
+                );
+                StructError::builder(WplCodeReason::Syntax)
+                    .detail(msg)
+                    .finish()
             }
             ErrMode::Cut(e) => {
                 let where_in = split_string(code);
-                StructError::from(WplCodeReason::Syntax(format!(
+                let msg = format!(
                     ":code parse fail\n[path ]: '{}'\n[where]: '{}'\n[error]: {}",
                     path, where_in, e
-                )))
+                );
+                StructError::builder(WplCodeReason::Syntax)
+                    .detail(msg)
+                    .finish()
             }
         }
     }
 
     fn from_parse_err(e: ParseError<&str, ContextError>, code: &str, path: &str) -> Self {
         let where_in = split_string(code);
-        StructError::from(WplCodeReason::Syntax(format!(
+        let msg = format!(
             "parse error\n[path ]: '{}'\n[where]: '{}'\n[error]: {}",
             path, where_in, e
-        )))
+        );
+        StructError::builder(WplCodeReason::Syntax)
+            .detail(msg)
+            .finish()
     }
 }
 

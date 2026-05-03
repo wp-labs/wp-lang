@@ -45,7 +45,10 @@ impl WplCode {
     pub fn build(path: PathBuf, code: &str) -> WplCodeResult<Self> {
         let mut in_code = code;
         let pure_code = CommentParser::ignore_comment(&mut in_code).map_err(|e| {
-            WplCodeError::from(WplCodeReason::Syntax(format!("comment proc error {} ", e)))
+            let msg = format!("comment proc error {} ", e);
+            WplCodeError::builder(WplCodeReason::Syntax)
+                .detail(msg)
+                .finish()
         })?;
 
         Ok(Self {
@@ -57,15 +60,21 @@ impl WplCode {
         &self.code
     }
     pub fn parse_pkg(&self) -> WplCodeResult<WplPackage> {
-        let package = wpl_package
-            .parse(self.code.as_str())
-            .map_err(|err| WplCodeError::from(WplCodeReason::Syntax(error_detail(err))))?;
+        let package = wpl_package.parse(self.code.as_str()).map_err(|err| {
+            let msg = error_detail(err);
+            WplCodeError::builder(WplCodeReason::Syntax)
+                .detail(msg)
+                .finish()
+        })?;
         Ok(package)
     }
     pub fn parse_rule(&self) -> WplCodeResult<WplPackage> {
-        let rule = wpl_rule
-            .parse(self.code.as_str())
-            .map_err(|err| WplCodeError::from(WplCodeReason::Syntax(error_detail(err))))?;
+        let rule = wpl_rule.parse(self.code.as_str()).map_err(|err| {
+            let msg = error_detail(err);
+            WplCodeError::builder(WplCodeReason::Syntax)
+                .detail(msg)
+                .finish()
+        })?;
         let mut target = WplPackage::default();
         target.rules.push_back(rule);
         Ok(target)

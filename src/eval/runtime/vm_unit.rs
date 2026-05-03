@@ -174,10 +174,9 @@ impl WplEvaluator {
             if let Some(pipe_unit) = builtins::registry::create_pipe_unit(proc) {
                 target_dpl.preorder.push(pipe_unit);
             } else {
-                return Err(WplCodeError::from(WplCodeReason::UnSupport(format!(
-                    "Pipe processor '{}' not registered",
-                    proc
-                ))));
+                return Err(WplCodeError::builder(WplCodeReason::UnSupport)
+                    .detail(format!("Pipe processor '{}' not registered", proc))
+                    .finish());
             }
         }
         for (i, group) in express.group.iter().enumerate() {
