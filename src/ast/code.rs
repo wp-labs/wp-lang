@@ -9,10 +9,7 @@ use crate::parser::wpl_pkg::wpl_package;
 use crate::parser::wpl_rule::wpl_rule;
 use crate::winnow::Parser;
 use derive_getters::Getters;
-use orion_error::ErrorWith;
-use orion_error::UvsFrom;
-use orion_error::compat_traits::ErrorOweBase;
-use orion_error::conversion::ToStructError;
+use orion_error::conversion::{ErrorWith, SourceErr, ToStructError};
 use wp_primitives::comment::CommentParser;
 
 #[derive(Debug, Clone, Getters)]
@@ -89,7 +86,7 @@ impl WplCode {
         let mut buffer = Vec::with_capacity(10240);
         let mut f = File::open(wpl_file.clone())
             //.with_context(|| format!("conf file not found: {:?}", wpl_file))
-            .owe(WplCodeReason::from_conf())
+            .source_err(WplCodeReason::core_conf(), "open wpl file")
             .at(wpl_file.as_ref())?;
         //.owe_conf::<WPLCodeError>()?;
         f.read_to_end(&mut buffer).expect("read conf file error");
@@ -109,7 +106,7 @@ impl WplCode {
         if let Some(rule_file) = arg_file {
             return WplCode::load(rule_file);
         }
-        Err(WplCodeReason::from_not_found()
+        Err(WplCodeReason::not_found_error()
             .to_err()
             .with_detail("miss wpl file"))
     }

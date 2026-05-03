@@ -319,7 +319,7 @@ mod tests {
     use crate::eval::value::test_utils::ParserTUnit;
     use crate::parser::error::WplCodeResult;
     use crate::{WplEvaluator, ast::WplField};
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
     use wp_model_core::model::{DataField, DataRecord, data::Field};
 
     #[test]

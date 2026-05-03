@@ -43,7 +43,7 @@ impl LogicProc for GroupSomeOf {
 mod tests {
     use crate::parser::error::WplCodeResult;
     use crate::{WplEvaluator, wpl_express};
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
     use wp_primitives::Parser;
 
     #[test]

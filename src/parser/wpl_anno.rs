@@ -68,7 +68,7 @@ mod tests {
     use crate::ast::{AnnEnum, AnnFun};
     use crate::parser::utils::take_tag_kv;
     use crate::parser::wpl_anno::{ann_fun, wpl_tags};
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
     use wp_primitives::Parser;
 
     #[test]

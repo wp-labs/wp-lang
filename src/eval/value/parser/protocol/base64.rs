@@ -58,7 +58,7 @@ impl FieldParser for Base64P {
 
 #[cfg(test)]
 mod tests {
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
     use wp_model_core::model::DataType::Base64;
 
     use crate::eval::value::test_utils::ParserTUnit;

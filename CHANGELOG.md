@@ -1,6 +1,19 @@
 # Changelog
 
-## [0.2.0 Unreleased]
+## [0.3.0] - 2026-05-04
+
+### Changed
+- **orion-error 0.7 → 0.8**: Migrate error-building callsites from the removed `owe()` / `ErrorOweBase` / `UvsFrom` / `ContextRecord` / `testcase::TestAssert` APIs to the 0.8 equivalents:
+  - `.owe(Reason::from_conf())` → `.source_err(Reason::core_conf(), detail)` for `io::Error` / `toml::Error` sources.
+  - `.owe(Reason::from_data())` → `.source_raw_err(Reason::data_error(), detail)` for third-party `StdError` types.
+  - `UvsFrom` delegating constructors (`from_conf()`, `from_data()`, `from_not_found()`) → `#[derive(OrionError)]` delegate constructors (`core_conf()`, `data_error()`, `not_found_error()`).
+  - `runtime::ContextRecord` → `OperationContext::record()` / `record_field()` (now inherent methods).
+  - `traits_ext::ToStructError` → `conversion::ToStructError`.
+  - `testcase::TestAssert` → `dev::testing::TestAssert`.
+  - `UvsReason` → `UnifiedReason`.
+- **Dependencies**: Upgrade `wp-parse-api` 0.9 → 0.10; `orion-error` from crate path to crates.io `0.8` with `toml` + `serde_json` features.
+
+## [0.2.0] - 2026-05-04
 
 ### Changed
 - **Error handling**: Replace `anyhow::Result` with structured `WplCodeError` / `WplCodeResult` based on `orion-error::StructError<WplCodeReason>`, providing stable error codes and categories for all parse and runtime paths.

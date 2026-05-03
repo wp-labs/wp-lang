@@ -1,6 +1,5 @@
 use crate::ast::AnnFun;
 use crate::{WparseError, WparseReason};
-use orion_error::UvsFrom;
 use orion_error::conversion::ToStructError;
 use smol_str::SmolStr;
 use std::collections::BTreeMap;
@@ -51,7 +50,7 @@ impl AnnotationFunc for RawCopy {
                     data.append(DataField::from_chars(self.raw_key.clone(), str.to_string()));
                 }
                 Err(e) => {
-                    return Err(WparseReason::from_data()
+                    return Err(WparseReason::data_error()
                         .to_err()
                         .with_detail(format!("[u8] to string error :{}", e)));
                 }
@@ -61,7 +60,7 @@ impl AnnotationFunc for RawCopy {
                     data.append(DataField::from_chars(self.raw_key.clone(), str.to_string()));
                 }
                 Err(e) => {
-                    return Err(WparseReason::from_data()
+                    return Err(WparseReason::data_error()
                         .to_err()
                         .with_detail(format!("ArcBytes to string error :{}", e)));
                 }
@@ -116,7 +115,7 @@ impl AnnotationType {
 mod tests {
     use super::*;
     use crate::pkg::DEFAULT_KEY;
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
     use std::collections::BTreeMap;
     use wp_connector_api::{SourceEvent, Tags};
     use wp_model_core::model::DataRecord;

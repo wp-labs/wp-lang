@@ -123,7 +123,7 @@ mod tests {
     use crate::eval::value::parser::network::net::{IpNetP, IpPSR, ip};
     use crate::eval::value::test_utils::{ParserTUnit, verify_parse_v_suc_end};
     use crate::parser::error::WplCodeResult;
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
     use wp_model_core::model::{DataField, IpNetValue};
 
     #[test]

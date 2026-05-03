@@ -67,7 +67,7 @@ mod tests {
 
     use crate::ast::{WplField, WplSep};
     use crate::parser::error::WplCodeResult;
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
 
     use super::*;
     use crate::eval::runtime::field::FieldEvalUnit;

@@ -2,7 +2,7 @@
 mod tests {
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::parser::parse_code::wpl_express;
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
     use wp_model_core::model::Value;
     use wp_model_core::raw::RawData;
     use wp_primitives::Parser;

@@ -116,7 +116,7 @@ mod tests {
     use super::*;
     use crate::parser::error::IntoWplCodeError;
     use crate::parser::error::WplCodeResult;
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
 
     #[test]
     fn test_symbol() -> WplCodeResult<()> {

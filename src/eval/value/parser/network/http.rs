@@ -224,7 +224,7 @@ mod tests {
     use crate::eval::value::test_utils::{ParserTUnit, ParserTestEnv, verify_gen_parse};
     use crate::parser::error::IntoWplCodeError;
     use crate::parser::error::WplCodeResult;
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
 
     use super::*;
 

@@ -50,7 +50,7 @@ impl PatternParser for UrlP {
 mod tests {
     use super::*;
     use crate::eval::value::test_utils::ParserTUnit;
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
 
     #[test]
     fn test_url() {

@@ -1,5 +1,6 @@
 use crate::winnow::error::{ContextError, ParseError, StrContext};
-use orion_error::{OrionError, StructError, UvsReason};
+use orion_error::reason::UnifiedReason;
+use orion_error::{OrionError, StructError};
 use serde::Serialize;
 use winnow::error::{ErrMode, Needed};
 use wp_error::util::split_string;
@@ -94,11 +95,11 @@ pub enum WplCodeReason {
     #[orion_error(identity = "biz.unsupport")]
     UnSupport,
     #[orion_error(transparent)]
-    Uvs(UvsReason),
+    Uvs(UnifiedReason),
 }
 
-impl From<UvsReason> for WplCodeReason {
-    fn from(r: UvsReason) -> Self {
+impl From<UnifiedReason> for WplCodeReason {
+    fn from(r: UnifiedReason) -> Self {
         WplCodeReason::Uvs(r)
     }
 }

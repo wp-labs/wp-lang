@@ -45,7 +45,7 @@ impl PatternParser for IgnoreP {
 mod tests {
     use crate::ast::WplField;
     use crate::eval::value::test_utils::ParserTUnit;
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
 
     use super::*;
 

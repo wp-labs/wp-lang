@@ -2,9 +2,8 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::net::Ipv4Addr;
 
-use orion_error::compat_traits::ErrorOweBase;
-use orion_error::runtime::ContextRecord;
-use orion_error::{ErrorWith, OperationContext, UvsFrom};
+use orion_error::OperationContext;
+use orion_error::conversion::{ErrorWith, SourceErr};
 use wp_model_core::model::FNameStr;
 
 use crate::parser::error::{WplCodeReason, WplCodeResult};
@@ -20,10 +19,10 @@ impl FieldsGenRule {
         ctx.record("path", path);
 
         let content = std::fs::read_to_string(path)
-            .owe(WplCodeReason::from_conf())
+            .source_err(WplCodeReason::core_conf(), "read gen rule file")
             .with_context(&ctx)?;
         let res: Self = toml::from_str(&content)
-            .owe(WplCodeReason::from_conf())
+            .source_err(WplCodeReason::core_conf(), "parse gen rule toml")
             .with_context(&ctx)?;
         Ok(res)
     }

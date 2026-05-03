@@ -650,7 +650,7 @@ impl Fun0Builder for SelectLast {
 mod tests {
     use std::net::{Ipv4Addr, Ipv6Addr};
 
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
 
     use crate::ast::processor::{Has, JsonUnescape, ReplaceFunc, SelectLast, TakeField};
 

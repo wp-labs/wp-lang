@@ -1,7 +1,6 @@
 use base64::{Engine as _, engine::general_purpose};
 use bytes::Bytes;
-use orion_error::compat_traits::ErrorOweBase;
-use orion_error::{ErrorWith, UvsFrom};
+use orion_error::conversion::{ErrorWith, SourceRawErr};
 use std::sync::Arc;
 
 use wp_model_core::raw::RawData;
@@ -18,24 +17,24 @@ impl PipeProcessor for Base64Proc {
             RawData::String(s) => {
                 let decoded = general_purpose::STANDARD
                     .decode(s.as_bytes())
-                    .owe(WparseReason::from_data())
+                    .source_raw_err(WparseReason::data_error(), "base64 decode")
                     .doing("base64 decode")?;
                 let vstring = String::from_utf8(decoded)
-                    .owe(WparseReason::from_data())
+                    .source_raw_err(WparseReason::data_error(), "utf8 to json")
                     .doing("to-json")?;
                 Ok(RawData::from_string(vstring))
             }
             RawData::Bytes(b) => {
                 let decoded = general_purpose::STANDARD
                     .decode(b.as_ref())
-                    .owe(WparseReason::from_data())
+                    .source_raw_err(WparseReason::data_error(), "base64 decode bytes")
                     .doing("base64 decode")?;
                 Ok(RawData::Bytes(Bytes::from(decoded)))
             }
             RawData::ArcBytes(b) => {
                 let decoded = general_purpose::STANDARD
                     .decode(b.as_ref())
-                    .owe(WparseReason::from_data())
+                    .source_raw_err(WparseReason::data_error(), "base64 decode arc bytes")
                     .doing("base64 decode")?;
                 // 注意：RawData::ArcBytes 现在使用 Arc<Vec<u8>>
                 Ok(RawData::ArcBytes(Arc::new(decoded)))

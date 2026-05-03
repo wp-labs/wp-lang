@@ -74,9 +74,7 @@ mod tests {
     use crate::parser::error::WplCodeResult;
     use crate::parser::wpl_pkg::{wpl_package, wpl_pkg_body};
     use crate::parser::wpl_rule::pip_proc;
-    use orion_error::UvsFrom;
-    use orion_error::compat_traits::ErrorOweBase;
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
     use wp_model_core::model::DataType;
 
     #[test]
@@ -89,7 +87,11 @@ mod tests {
         assert_eq!(
             wpl_package
                 .parse(&LocatingSlice::new(input))
-                .owe(WplCodeReason::from_conf())?
+                .map_err(|e| {
+                    WplCodeError::builder(WplCodeReason::core_conf())
+                        .detail(e.to_string())
+                        .finish()
+                })?
                 .to_string(),
             r#"package test {
   rule test {

@@ -1,10 +1,8 @@
 use glob::glob;
 use std::{fs::File, io::Read, path::PathBuf};
 
-use orion_error::ErrorWith;
-use orion_error::compat_traits::ErrorOweBase;
-use orion_error::runtime::ContextRecord;
-use orion_error::{OperationContext, UvsFrom};
+use orion_error::OperationContext;
+use orion_error::conversion::{ErrorWith, SourceErr, SourceRawErr};
 use wp_log::info_ctrl;
 
 use crate::WplCode;
@@ -20,14 +18,14 @@ pub fn fetch_wpl_data(path: &str, target: &str) -> WplCodeResult<Vec<WplCode>> {
     for f_name in &files {
         info_ctrl!("load conf file: {:?}", f_name);
         let mut f = File::open(f_name)
-            .owe(WplCodeReason::from_conf())
+            .source_err(WplCodeReason::core_conf(), "open file")
             .with_context(&ctx)?;
         let mut buffer = Vec::with_capacity(10240);
         f.read_to_end(&mut buffer)
-            .owe(WplCodeReason::from_conf())
+            .source_err(WplCodeReason::core_conf(), "read file")
             .with_context(&ctx)?;
         let file_data = String::from_utf8(buffer)
-            .owe(WplCodeReason::from_conf())
+            .source_raw_err(WplCodeReason::core_conf(), "utf8 decode")
             .with_context(&ctx)?;
         wpl_vec.push(WplCode::try_from((PathBuf::from(f_name), file_data))?)
     }

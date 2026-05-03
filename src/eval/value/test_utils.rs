@@ -11,7 +11,7 @@ use crate::eval::value::parse_def::FieldParser;
 use crate::eval::vof;
 use crate::generator::GenChannel;
 use crate::generator::ParserValue;
-use orion_error::testcase::TestAssert;
+use orion_error::dev::testing::TestAssert;
 use wp_data_fmt::{DataFormat, Raw};
 use wp_model_core::model::DataField;
 use wp_model_core::model::DataType;

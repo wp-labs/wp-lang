@@ -13,8 +13,8 @@ use wp_parse_api::{PipeHold, WparseError, WparseReason};
 
 use crate::parser::error::{WplCodeError, WplCodeReason};
 use crate::parser::wpl_rule::wpl_rule;
+use orion_error::conversion::ErrorWith;
 use orion_error::conversion::ToStructError;
-use orion_error::{ErrorWith, UvsFrom};
 use wp_log::debug_edata;
 use wp_model_core::model::DataRecord;
 use wp_primitives::Parser;
@@ -123,7 +123,7 @@ impl WplEvaluator {
                     } else {
                         input.chars().take(80).collect()
                     };
-                    Err(WparseReason::from_data()
+                    Err(WparseReason::data_error()
                         .to_err()
                         .with_detail(format!("{preview} @ {pos}"))
                         .with_detail(e.to_string()))
@@ -145,7 +145,7 @@ impl WplEvaluator {
         let mut cur_code = code;
         let rule = wpl_rule.parse_next(&mut cur_code).map_err(
             |err| {
-                WplCodeReason::from_data()
+                WplCodeReason::data_error()
                     .to_err()
                     .with_detail(cur_code.to_string())
                     .with_detail(err.to_string())
@@ -306,7 +306,7 @@ mod tests {
     use crate::parser::error::IntoWplCodeError;
     use crate::parser::error::WplCodeResult;
     use crate::{WparseResult, WplExpress, register_wpl_pipe};
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
     use smol_str::SmolStr;
     use wp_model_core::raw::RawData;
     use wp_parse_api::PipeProcessor;

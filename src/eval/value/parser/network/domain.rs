@@ -125,7 +125,7 @@ fn root_domain<'a>(input: &mut &'a str) -> ModalResult<&'a str> {
 mod tests {
     use super::*;
     use crate::eval::value::test_utils::ParserTUnit;
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
 
     #[test]
     fn test_domain() {

@@ -140,7 +140,7 @@ impl WplEvalGroup {
 
 #[cfg(test)]
 mod tests {
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
     use wp_primitives::Parser;
 
     use crate::ast::WplSep;

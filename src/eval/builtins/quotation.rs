@@ -1,6 +1,5 @@
 use bytes::Bytes;
-use orion_error::compat_traits::ErrorOweBase;
-use orion_error::{ErrorWith, UvsFrom};
+use orion_error::conversion::{ErrorWith, SourceRawErr};
 use std::sync::Arc;
 use wp_model_core::raw::RawData;
 use wp_parse_api::{PipeProcessor, WparseReason, WparseResult};
@@ -34,7 +33,7 @@ impl PipeProcessor for EscQuotaProc {
             RawData::String(s) => {
                 let unescaped_bytes = unescape_bytes(s.as_bytes());
                 let vstring = String::from_utf8(unescaped_bytes)
-                    .owe(WparseReason::from_data())
+                    .source_raw_err(WparseReason::data_error(), "utf8 to json")
                     .doing("to-json")?;
                 Ok(RawData::from_string(vstring))
             }

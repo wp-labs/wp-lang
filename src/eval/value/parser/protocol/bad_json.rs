@@ -60,7 +60,7 @@ mod tests {
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::eval::value::test_utils::ParserTUnit;
     use crate::parser::error::WplCodeResult;
-    use orion_error::testcase::TestAssert;
+    use orion_error::dev::testing::TestAssert;
 
     const UNKNOWN_JSON_SAMPLE: &str = include_str!("../../../../../tests/unknow.json");
 
