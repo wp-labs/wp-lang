@@ -31,7 +31,10 @@ impl WplField {
         s_end: &str,
         data: &mut &'a str,
     ) -> ModalResult<&'a str> {
-        let take = delimited(literal(s_beg), take_until(1.., s_end), literal(s_end))
+        if data.is_empty() {
+            return Ok("");
+        }
+        let take = delimited(literal(s_beg), take_until(0.., s_end), literal(s_end))
             .context(StrContext::Label("scope"))
             .context(StrContext::Expected(StrContextValue::Description(
                 "<<< scope: <beg,end>",

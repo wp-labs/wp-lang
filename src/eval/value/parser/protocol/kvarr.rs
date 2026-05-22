@@ -1,6 +1,7 @@
 use super::super::prelude::*;
 use crate::ast::{DefaultSep, WplSepT};
 use crate::eval::runtime::field::FieldEvalUnit;
+use crate::eval::value::field_parse::FieldParse;
 use crate::eval::value::parse_def::PatternParser;
 use crate::parser::utils::{decode_escapes, interval_data, quot_str, take_kv_key, take_to_end};
 use serde_json::{Number, Value};
@@ -106,9 +107,7 @@ impl KvArrP {
     fn take_value(input: &mut &str, sep: &WplSepT<Self>) -> ModalResult<Value> {
         multispace0.parse_next(input)?;
         if input.is_empty() {
-            return fail
-                .context(ctx_desc("kvarr value missing"))
-                .parse_next(input);
+            return Ok(Value::Null);
         }
         if let Ok(val) = quot_str.parse_next(input) {
             return Ok(Value::String(val.to_string()));
@@ -122,6 +121,9 @@ impl KvArrP {
             *input = cp;
         }
         let raw = Self::take_unquoted(input, sep)?;
+        if raw.is_empty() {
+            return Ok(Value::Null);
+        }
         Ok(Self::scalar_value(raw.as_str()))
     }
 
@@ -223,6 +225,12 @@ impl KvArrP {
     ) -> ModalResult<()> {
         if let Some(sub_fpu) = fpu.get_sub_fpu(key) {
             if let Some(raw) = Self::value_to_raw(&value) {
+                let mut probe = raw.as_str();
+                if let Ok(extracted) = sub_fpu.conf().scope_field(&mut probe)
+                    && extracted.is_empty()
+                {
+                    return Ok(());
+                }
                 let mut sep = sub_fpu.conf().resolve_sep(upper_sep);
                 if sep.is_space_sep() {
                     sep.set_current("\\0");
