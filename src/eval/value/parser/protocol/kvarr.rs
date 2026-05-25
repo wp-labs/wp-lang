@@ -644,4 +644,49 @@ mod tests {
         );
         Ok(())
     }
+
+    #[test]
+    fn test_kvarr_empty_value_null() -> WplCodeResult<()> {
+        // p=| before sep → Null; b= at end → Null
+        let conf = WplField::try_parse("kvarr(chars@a, digit@b)\\|").assert();
+        let mut data = "a=|b=";
+        let parser = ParserTUnit::new(KvArrP::default(), conf);
+        let fields = parser.verify_parse_suc(&mut data).assert();
+        let record = DataRecord::from(fields);
+        assert!(record.field("a").is_none());
+        assert!(record.field("b").is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_empty_scope_null() -> WplCodeResult<()> {
+        // [] with scope <[,]> → scope probe extracts empty → Null
+        let conf = WplField::try_parse("kvarr(chars@a<[,]>, digit@b)\\|").assert();
+        let mut data = "a=[]|b=1";
+        let parser = ParserTUnit::new(KvArrP::default(), conf);
+        let fields = parser.verify_parse_suc(&mut data).assert();
+        let record = DataRecord::from(fields);
+        assert!(record.field("a").is_none());
+        assert_eq!(
+            record.field("b").map(|s| s.as_field()),
+            Some(&DataField::from_digit("b", 1))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_empty_value_with_scope_null() -> WplCodeResult<()> {
+        // a= empty before sep, field has scope <[,]> → Null (kvarr layer handles it)
+        let conf = WplField::try_parse("kvarr(chars@a<[,]>, digit@b)\\|").assert();
+        let mut data = "a=|b=1";
+        let parser = ParserTUnit::new(KvArrP::default(), conf);
+        let fields = parser.verify_parse_suc(&mut data).assert();
+        let record = DataRecord::from(fields);
+        assert!(record.field("a").is_none());
+        assert_eq!(
+            record.field("b").map(|s| s.as_field()),
+            Some(&DataField::from_digit("b", 1))
+        );
+        Ok(())
+    }
 }
