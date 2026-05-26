@@ -1,6 +1,5 @@
+use crate::WparseError;
 use crate::ast::AnnFun;
-use crate::{WparseError, WparseReason};
-use orion_error::conversion::ToStructError;
 use smol_str::SmolStr;
 use std::collections::BTreeMap;
 use wp_connector_api::SourceEvent;
@@ -45,26 +44,18 @@ impl AnnotationFunc for RawCopy {
             RawData::String(raw) => {
                 data.append(DataField::from_chars(self.raw_key.clone(), raw.clone()));
             }
-            RawData::Bytes(raw) => match std::str::from_utf8(raw) {
-                Ok(str) => {
-                    data.append(DataField::from_chars(self.raw_key.clone(), str.to_string()));
-                }
-                Err(e) => {
-                    return Err(WparseReason::data_error()
-                        .to_err()
-                        .with_detail(format!("[u8] to string error :{}", e)));
-                }
-            },
-            RawData::ArcBytes(raw) => match std::str::from_utf8(raw) {
-                Ok(str) => {
-                    data.append(DataField::from_chars(self.raw_key.clone(), str.to_string()));
-                }
-                Err(e) => {
-                    return Err(WparseReason::data_error()
-                        .to_err()
-                        .with_detail(format!("ArcBytes to string error :{}", e)));
-                }
-            },
+            RawData::Bytes(raw) => {
+                data.append(DataField::from_chars(
+                    self.raw_key.clone(),
+                    String::from_utf8_lossy(raw).into_owned(),
+                ));
+            }
+            RawData::ArcBytes(raw) => {
+                data.append(DataField::from_chars(
+                    self.raw_key.clone(),
+                    String::from_utf8_lossy(raw).into_owned(),
+                ));
+            }
         }
         Ok(())
     }
@@ -115,8 +106,10 @@ impl AnnotationType {
 mod tests {
     use super::*;
     use crate::pkg::DEFAULT_KEY;
+    use bytes::Bytes;
     use orion_error::dev::testing::TestAssert;
     use std::collections::BTreeMap;
+    use std::sync::Arc;
     use wp_connector_api::{SourceEvent, Tags};
     use wp_model_core::model::DataRecord;
     use wp_model_core::raw::RawData;
@@ -157,5 +150,50 @@ mod tests {
         tag.first().unwrap().proc(&src, &mut data).unwrap();
         let expected = DataField::from_chars("raw", "test");
         assert_eq!(data.field("raw").map(|s| s.as_field()), Some(&expected));
+    }
+
+    #[test]
+    fn test_copy_fun_handles_invalid_utf8_bytes() {
+        let tag = copy_raw_tag("raw");
+        let raw = Bytes::from_static(b"hello \xff\xfe\xc0\xaf");
+        let expected_raw = String::from_utf8_lossy(&raw).into_owned();
+        let mut data = DataRecord::test_value();
+        let src = SourceEvent::new(
+            1,
+            DEFAULT_KEY.to_string(),
+            RawData::Bytes(raw),
+            Tags::new().into(),
+        );
+
+        tag.first().unwrap().proc(&src, &mut data).unwrap();
+
+        let expected = DataField::from_chars("raw", expected_raw);
+        assert_eq!(data.field("raw").map(|s| s.as_field()), Some(&expected));
+    }
+
+    #[test]
+    fn test_copy_fun_handles_invalid_utf8_arc_bytes() {
+        let tag = copy_raw_tag("raw");
+        let raw = Arc::new(b"hello \xff\xfe\xc0\xaf".to_vec());
+        let expected_raw = String::from_utf8_lossy(raw.as_slice()).into_owned();
+        let mut data = DataRecord::test_value();
+        let src = SourceEvent::new(
+            1,
+            DEFAULT_KEY.to_string(),
+            RawData::ArcBytes(raw),
+            Tags::new().into(),
+        );
+
+        tag.first().unwrap().proc(&src, &mut data).unwrap();
+
+        let expected = DataField::from_chars("raw", expected_raw);
+        assert_eq!(data.field("raw").map(|s| s.as_field()), Some(&expected));
+    }
+
+    fn copy_raw_tag(raw_key: &str) -> Vec<AnnotationType> {
+        AnnotationType::convert(&Some(AnnFun {
+            tags: Default::default(),
+            copy_raw: Some(("name".into(), raw_key.into())),
+        }))
     }
 }
