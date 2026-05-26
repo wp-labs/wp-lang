@@ -1,4 +1,12 @@
 # Changelog
+## [0.3.3] - 2026-05-26
+
+### Fixed
+- **UTF-8 handling in `copy_raw`**: `RawCopy` annotation function now uses `String::from_utf8_lossy()` instead of strict `std::str::from_utf8()` when converting `Bytes` and `ArcBytes` raw data to chars fields. Invalid UTF-8 byte sequences are now replaced with U+FFFD replacement characters rather than raising a parse error.
+
+### Added
+- **Invalid UTF-8 tests**: Test coverage for `RawCopy` handling of invalid UTF-8 bytes in both `Bytes` and `ArcBytes` variants.
+
 ## [0.3.2] - 2026-05-26
 
 ### Fixed
