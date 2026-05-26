@@ -1,4 +1,14 @@
 # Changelog
+## [0.3.2] - 2026-05-26
+
+### Fixed
+- **kvarr bracket-delimited fields**: When `<[,]>` bracket-delimited field input is empty, return empty string instead of raising a parse error. kvarr value parser now returns `Null` for empty values, and bracket-scope fields whose extracted content is empty are handled gracefully instead of failing.
+
+### Changed
+- **Dependencies**: Upgrade `wp-connector-api` 0.9 → 0.10, `wp-error` 0.9 → 0.10, `wp-log` 0.3 → 0.4, `wp-specs` 0.9 → 0.10.
+
+### Added
+- **kvarr test cases**: Additional test coverage for kvarr bracket-delimited field parsing with empty input.
 
 ## [0.3.0] - 2026-05-04
 
