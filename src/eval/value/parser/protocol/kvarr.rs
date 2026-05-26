@@ -1,6 +1,7 @@
 use super::super::prelude::*;
 use crate::ast::{DefaultSep, WplSepT};
 use crate::eval::runtime::field::FieldEvalUnit;
+use crate::eval::value::field_parse::FieldParse;
 use crate::eval::value::parse_def::PatternParser;
 use crate::parser::utils::{decode_escapes, interval_data, quot_str, take_kv_key, take_to_end};
 use serde_json::{Number, Value};
@@ -106,9 +107,7 @@ impl KvArrP {
     fn take_value(input: &mut &str, sep: &WplSepT<Self>) -> ModalResult<Value> {
         multispace0.parse_next(input)?;
         if input.is_empty() {
-            return fail
-                .context(ctx_desc("kvarr value missing"))
-                .parse_next(input);
+            return Ok(Value::Null);
         }
         if let Ok(val) = quot_str.parse_next(input) {
             return Ok(Value::String(val.to_string()));
@@ -122,6 +121,9 @@ impl KvArrP {
             *input = cp;
         }
         let raw = Self::take_unquoted(input, sep)?;
+        if raw.is_empty() {
+            return Ok(Value::Null);
+        }
         Ok(Self::scalar_value(raw.as_str()))
     }
 
@@ -223,6 +225,12 @@ impl KvArrP {
     ) -> ModalResult<()> {
         if let Some(sub_fpu) = fpu.get_sub_fpu(key) {
             if let Some(raw) = Self::value_to_raw(&value) {
+                let mut probe = raw.as_str();
+                if let Ok(extracted) = sub_fpu.conf().scope_field(&mut probe)
+                    && extracted.is_empty()
+                {
+                    return Ok(());
+                }
                 let mut sep = sub_fpu.conf().resolve_sep(upper_sep);
                 if sep.is_space_sep() {
                     sep.set_current("\\0");
@@ -633,6 +641,51 @@ mod tests {
         assert_eq!(
             record.field("set{a}").map(|s| s.as_field()),
             Some(&DataField::from_chars("set{a}", "value"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_empty_value_null() -> WplCodeResult<()> {
+        // p=| before sep → Null; b= at end → Null
+        let conf = WplField::try_parse("kvarr(chars@a, digit@b)\\|").assert();
+        let mut data = "a=|b=";
+        let parser = ParserTUnit::new(KvArrP::default(), conf);
+        let fields = parser.verify_parse_suc(&mut data).assert();
+        let record = DataRecord::from(fields);
+        assert!(record.field("a").is_none());
+        assert!(record.field("b").is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_empty_scope_null() -> WplCodeResult<()> {
+        // [] with scope <[,]> → scope probe extracts empty → Null
+        let conf = WplField::try_parse("kvarr(chars@a<[,]>, digit@b)\\|").assert();
+        let mut data = "a=[]|b=1";
+        let parser = ParserTUnit::new(KvArrP::default(), conf);
+        let fields = parser.verify_parse_suc(&mut data).assert();
+        let record = DataRecord::from(fields);
+        assert!(record.field("a").is_none());
+        assert_eq!(
+            record.field("b").map(|s| s.as_field()),
+            Some(&DataField::from_digit("b", 1))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_empty_value_with_scope_null() -> WplCodeResult<()> {
+        // a= empty before sep, field has scope <[,]> → Null (kvarr layer handles it)
+        let conf = WplField::try_parse("kvarr(chars@a<[,]>, digit@b)\\|").assert();
+        let mut data = "a=|b=1";
+        let parser = ParserTUnit::new(KvArrP::default(), conf);
+        let fields = parser.verify_parse_suc(&mut data).assert();
+        let record = DataRecord::from(fields);
+        assert!(record.field("a").is_none());
+        assert_eq!(
+            record.field("b").map(|s| s.as_field()),
+            Some(&DataField::from_digit("b", 1))
         );
         Ok(())
     }
