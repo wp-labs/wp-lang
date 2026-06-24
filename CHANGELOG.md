@@ -1,4 +1,18 @@
 # Changelog
+## [0.3.4] - 2026-06-24
+
+### Added
+- **AWS parser-only benchmark**: Add `benches/aws_parse_only.rs` to measure the AWS ELB WPL/sample hot path independently from source and sink overhead.
+- **Performance guard suite**: Add `benches/perf_guard.rs` and `scripts/perf-guard.sh` with `baseline`, `check`, `run`, and `report` modes for reusable parser regression checks.
+- **Performance report summary**: `scripts/perf-guard.sh report` now writes a Markdown report with case count, fastest/slowest cases, baseline comparison counts, and worst/best change.
+
+### Changed
+- **Empty pipe fast path**: Skip `PipeExecutor::execute(...)` for fields without pipes, reducing per-field overhead on wide WPL rules such as AWS ELB logs.
+- **Quoted `chars` dispatch**: Route `chars` parsing by input prefix so ordinary quoted values try `quot_str` directly instead of first failing through raw-string parsing.
+
+### Fixed
+- **Quoted field parse hot path**: Avoid repeated failed `quot_r_str` attempts for normal quoted AWS/nginx-style fields while preserving fallback behavior for malformed quoted input.
+
 ## [0.3.3] - 2026-05-26
 
 ### Fixed

@@ -179,6 +179,28 @@ pub fn quot_str<'a>(input: &mut &'a str) -> WResult<&'a str> {
     ))
     .parse_next(input)
 }
+
+#[inline]
+pub fn chars_value<'a>(input: &mut &'a str) -> WResult<&'a str> {
+    let s = *input;
+    if s.starts_with('"') || s.starts_with('\'') {
+        let cp = input.checkpoint();
+        if let Ok(value) = quot_str(input) {
+            return Ok(value);
+        }
+        input.reset(&cp);
+        return alt((window_path, take_to_end)).parse_next(input);
+    }
+    if s.starts_with("r#\"") || s.starts_with("r\"") {
+        let cp = input.checkpoint();
+        if let Ok(value) = quot_r_str(input) {
+            return Ok(value);
+        }
+        input.reset(&cp);
+    }
+    alt((window_path, take_to_end)).parse_next(input)
+}
+
 #[inline]
 pub fn interval_data<'a>(input: &mut &'a str) -> WResult<&'a str> {
     interval_impl
@@ -535,7 +557,9 @@ where
 mod tests {
     use super::*;
     use crate::parser::error::error_detail;
-    use crate::parser::utils::{quot_str, take_key, take_kv_key, take_parentheses, take_to_end};
+    use crate::parser::utils::{
+        chars_value, quot_str, take_key, take_kv_key, take_parentheses, take_to_end,
+    };
     use crate::parser::wpl_pkg::wpl_package;
     use orion_error::dev::testing::TestAssert;
     use winnow::LocatingSlice;
@@ -628,6 +652,25 @@ mod tests {
         assert_eq!(quot_r_str.parse_peek("r#\"end\"#"), Ok(("", "end")));
         // 兼容旧写法 r"..."
         assert_eq!(quot_r_str.parse_peek("r\"raw\""), Ok(("", "raw")));
+    }
+    #[test]
+    fn test_chars_value_dispatch() {
+        assert_eq!(
+            chars_value.parse_peek(r#""GET / HTTP/1.1""#),
+            Ok(("", "GET / HTTP/1.1"))
+        );
+        assert_eq!(
+            chars_value.parse_peek("r#\"raw value\"#"),
+            Ok(("", "raw value"))
+        );
+        assert_eq!(
+            chars_value.parse_peek(r#""unterminated fallback"#),
+            Ok(("", r#""unterminated fallback"#))
+        );
+        assert_eq!(
+            chars_value.parse_peek("plain chars"),
+            Ok(("", "plain chars"))
+        );
     }
     #[test]
     fn test_take_pat() {

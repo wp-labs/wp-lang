@@ -141,7 +141,13 @@ impl FieldEvalUnit {
             .parse(e_id, self, sep.as_ref(), data, run_key.clone(), out);
 
         match data_rst {
-            Ok(_) => self.pipe_exec.execute(e_id, out),
+            Ok(_) => {
+                if self.pipe_exec.is_empty() {
+                    Ok(())
+                } else {
+                    self.pipe_exec.execute(e_id, out)
+                }
+            }
             Err(e) => {
                 if self.conf.is_opt {
                     Ok(())

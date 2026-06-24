@@ -53,6 +53,14 @@ Run:
 
 Benchmarks live under `benches/` and use Criterion.
 
+Performance guard:
+- `scripts/perf-guard.sh baseline main` saves a local Criterion baseline.
+- `scripts/perf-guard.sh check main` compares the current tree against that baseline.
+- `scripts/perf-guard.sh report` writes a Markdown summary to `target/perf_guard_report.md`.
+- `scripts/perf-guard.sh run` runs the guard set without saving or comparing.
+
+The guard set covers AWS ELB parse-only, quoted `chars`, default-space `chars`, nginx-style quoted fields, pipe groups, and flat JSON parsing. Tune run length with `WP_PERF_GUARD_LOOPS`, `WP_PERF_GUARD_SAMPLE_SIZE`, `WP_PERF_GUARD_WARMUP`, and `WP_PERF_GUARD_MEASURE`.
+
 ## Checker API
 For reusable validation and sample execution, enable the `check` feature and use `wpl::check`.
 

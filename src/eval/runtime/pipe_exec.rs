@@ -46,6 +46,11 @@ impl PipeExecutor {
         self.pipes.push(pipe);
     }
 
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.pipes.is_empty()
+    }
+
     pub fn execute(&self, e_id: u64, data: &mut Vec<DataField>) -> ModalResult<()> {
         let mut cursor = FieldCursor::new(data, &self.pipes);
 

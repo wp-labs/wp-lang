@@ -8,10 +8,10 @@ use crate::eval::value::parser::physical::foundation::gen_chars;
 use crate::generator::{FieldGenConf, GenScopeEnum};
 use crate::generator::{GenChannel, ParserValue};
 use crate::parser::error::WplCodeResult;
-use crate::parser::utils::{quot_r_str, quot_str, take_to_end, window_path};
+use crate::parser::utils::chars_value;
 use rand::RngExt;
 use winnow::ascii::{digit1, multispace0};
-use winnow::combinator::{alt, preceded};
+use winnow::combinator::preceded;
 use wp_model_core::model::{DataField, Value};
 use wp_model_core::model::{DataType, DigitValue};
 use wp_primitives::Parser;
@@ -37,7 +37,7 @@ impl PatternParser for CharsP {
         out: &mut Vec<DataField>,
     ) -> ModalResult<()> {
         multispace0.parse_next(data)?;
-        let buffer = alt((quot_r_str, quot_str, window_path, take_to_end)).parse_next(data)?;
+        let buffer = chars_value.parse_next(data)?;
         out.push(DataField::new_opt(
             DataType::Chars,
             Some(name),

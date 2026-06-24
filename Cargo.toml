@@ -1,6 +1,6 @@
 [package]
 name = "wp-lang"
-version = "0.3.3" #@gxl:set(version)
+version = "0.3.4" #@gxl:set(version)
 edition = "2024"
 description = "WPL language crate with AST, parser, evaluator, builtins, and generators."
 license = "Apache-2.0"
@@ -79,4 +79,12 @@ harness = false
 
 [[bench]]
 name = "multi_rule_error"
+harness = false
+
+[[bench]]
+name = "aws_parse_only"
+harness = false
+
+[[bench]]
+name = "perf_guard"
 harness = false
