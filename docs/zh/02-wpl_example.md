@@ -511,6 +511,48 @@ note: (忽略)
 count: 7
 ```
 
+### 2.2 KvArr Raw 快速键值对数组解析
+
+`kvarr_raw` 用于大量 `key=value` 字段的日志。它默认不做自动类型推断，未显式声明的 value 都按 `chars` 输出；只有在子字段中声明的 key 才会深入解析。
+
+**全部按 chars 输出**:
+```wpl
+rule parse_kvarr_raw {
+    (kvarr_raw\,)
+}
+```
+
+**测试数据**:
+```
+x="a", b = 123, c = good
+```
+
+**预期结果**:
+```
+x: "a" (chars)
+b: "123" (chars)
+c: "good" (chars)
+```
+
+**指定单个字段类型**:
+```wpl
+rule parse_kvarr_raw_typed {
+    (kvarr_raw(digit@b)\,)
+}
+```
+
+**测试数据**:
+```
+x="a", b = 123, c = good
+```
+
+**预期结果**:
+```
+x: "a" (chars)
+b: 123 (digit)
+c: "good" (chars)
+```
+
 ### 3. 重复模式解析
 
 **重复固定次数**:

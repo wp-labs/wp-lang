@@ -48,6 +48,32 @@ const NGINX_WPL: &str =
 
 const NGINX_SAMPLE: &str = r#"222.133.52.20 - - [06/Aug/2019:12:12:19 +0800] "GET /nginx-logo.png HTTP/1.1" 200 368 "http://119.122.1.4/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36" "-""#;
 
+const FIREWALL_KV_PIPE_WPL: &str = r#"
+(
+    time:timestamp,
+    2*_,
+    kv()| (*kv()\|),
+)
+"#;
+
+const FIREWALL_KVARR_PIPE_WPL: &str = r#"
+(
+    time:timestamp,
+    3*_,
+    kvarr\|
+)
+"#;
+
+const FIREWALL_KVARR_RAW_PIPE_WPL: &str = r#"
+(
+    time:timestamp,
+    3*_,
+    kvarr_raw\|
+)
+"#;
+
+const FIREWALL_SAMPLE: &str = r#"2018-01-30 13:12:21 Security +01:00 Block: type=FWD|action=BLOCK|proto=UDP|ipVersion=4|srcIF=eth0|srcZone=LAN|srcIP=10.17.34.12|srcPort=54915|srcMAC=18:db:f2:13:ca:9c|srcNAT=0.0.0.0|srcCountry=CN|srcASN=4134|dstIF=eth1|dstZone=WAN|dstIP=10.17.34.255|dstPort=54915|dstService=custom_udp|dstNAT=0.0.0.0|dstCountry=US|dstASN=15169|rule=BLOCKALL|ruleType=FirewallPolicy|policyId=policy_10234|policyGroup=corp_default|interfaceGroup=internal_to_external|routingTable=main|connState=NEW|sessionId=843920184|sessionDuration=0|receivedPackets=0|sentPackets=0|receivedBytes=0|sentBytes=0|packetCount=1|byteCount=60|tcpFlags=|icmpType=|icmpCode=|application=unknown|applicationRisk=0|applicationCategory=unclassified|protocolDetection=enabled|detectedProtocol=udp_generic|user=john.doe|userGroup=employees|authMethod=ldap|vpnType=none|vpnTunnelId=0|contentProfile=default|contentAction=none|url=http://example.com/resource|urlCategory=uncategorized|threatLevel=0|threatName=none|signatureId=0|signatureVersion=0|limitProfile=default|rateLimitPps=1200|rateLimitBps=768000|logSource=box_firewall_activity|logType=activity|logVersion=1"#;
+
 static DEFAULT_SPACE_WPL: LazyLock<String> = LazyLock::new(|| {
     let fields = (0..32)
         .map(|idx| format!("chars:f{idx}"))
@@ -142,6 +168,17 @@ fn bench_perf_guard(c: &mut Criterion) {
             &QUOTED_CHARS_SAMPLE,
         ),
         PerfCase::new("nginx_quoted_fields", NGINX_WPL, NGINX_SAMPLE),
+        PerfCase::new("firewall_kv_pipe", FIREWALL_KV_PIPE_WPL, FIREWALL_SAMPLE),
+        PerfCase::new(
+            "firewall_kvarr_pipe",
+            FIREWALL_KVARR_PIPE_WPL,
+            FIREWALL_SAMPLE,
+        ),
+        PerfCase::new(
+            "firewall_kvarr_raw_pipe",
+            FIREWALL_KVARR_RAW_PIPE_WPL,
+            FIREWALL_SAMPLE,
+        ),
         PerfCase::new("json_flat_128_fields", "(json)", &JSON_FLAT_SAMPLE),
     ];
 

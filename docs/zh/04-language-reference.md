@@ -65,13 +65,14 @@
 
 | # | 类型 | 标识符 | 样例 | 说明 |
 |---|------|--------|------|------|
-| 23 | 键值对 | `kvarr` | `key=value` | KV 格式 |
-| 24 | JSON | `json` | `{"k":"v"}` | JSON 对象 |
-| 25 | 严格JSON | `exact_json` | `{"k":"v"}` | 严格验证 JSON |
-| 26 | 对象 | `obj` | 嵌套对象 | 通用对象 |
-| 27 | 数组 | `array` | `[1,2,3]` | 数组 |
-| 28 | 数字数组 | `array/digit` | `[1,2,3]` | 数字数组 |
-| 29 | 字符串数组 | `array/chars` | `["a","b"]` | 字符串数组 |
+| 23 | 键值对 | `kvarr` | `key=value` | KV 格式，默认自动类型推断 |
+| 24 | 快速键值对 | `kvarr_raw` | `key=value` | KV 格式，默认 value 按 `chars` 输出 |
+| 25 | JSON | `json` | `{"k":"v"}` | JSON 对象 |
+| 26 | 严格JSON | `exact_json` | `{"k":"v"}` | 严格验证 JSON |
+| 27 | 对象 | `obj` | 嵌套对象 | 通用对象 |
+| 28 | 数组 | `array` | `[1,2,3]` | 数组 |
+| 29 | 数字数组 | `array/digit` | `[1,2,3]` | 数字数组 |
+| 30 | 字符串数组 | `array/chars` | `["a","b"]` | 字符串数组 |
 
 ### 协议类型
 
@@ -266,6 +267,21 @@ kvarr(type@key, type@key, ...)
 **示例：**
 ```wpl
 kvarr(chars@hostname, digit@port, opt(chars)@user)
+```
+
+### KvArr Raw 子字段
+
+```wpl
+kvarr_raw(type@key, type@key, ...)
+```
+
+`kvarr_raw` 使用第一个 `=` 或 `:` 作为 key/value 分隔符，默认不做类型推断，所有未声明的 value 都按 `chars` 输出；显式声明的 key 才按声明类型解析。
+
+**示例：**
+```wpl
+kvarr_raw\,                    # b=123 -> b: chars("123")
+                               # url:http://host:80/path -> url: chars("http://host:80/path")
+kvarr_raw(digit@b)\,           # b=123 -> b: digit(123)
 ```
 
 ### 数组

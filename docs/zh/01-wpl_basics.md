@@ -248,7 +248,7 @@ rule test_plugin {
 - 基础：`bool` `chars` `digit` `float` `_` `sn`
 - 时间：`time` `time_iso` `time_3339` `time_2822` `time_timestamp`
 - 网络：`ip` `ip_net` `domain` `email` `port`
-- 文本/协议：`hex` `base64` `kv` `kvarr` `json` `exact_json` `http/request` `http/status` `http/agent` `http/method` `url`
+- 文本/协议：`hex` `base64` `kv` `kvarr` `kvarr_raw` `json` `exact_json` `http/request` `http/status` `http/agent` `http/method` `url`
 - 结构：`obj` `array[/subtype]` `symbol` `peek_symbol`
 
 更多产生式请参考《WPL 语法（EBNF）》：`./02-wpl_grammar.md`。
@@ -318,6 +318,26 @@ rule test_plugin {
   rule parse_with_meta { (kvarr(_@note, digit@count)) }
   # 输入："note=something count=7"
   # 输出：note (ignored), count=7
+  ```
+
+## KvArr Raw 类型（快速键值对数组）
+
+- 语法：`kvarr_raw(subfield1, subfield2, ...)`
+- 作用：解析 `key=value` 或 `key:value` 格式的键值对数组；默认不做自动类型推断，所有未显式声明的 value 都输出为 `chars`。
+- 性能定位：适合大量 KV 字段的日志，例如防火墙日志。`kvarr_raw\|` 对单字符字面分隔符有专用快路径。
+- 与 `kvarr` 的区别：
+  - `kvarr` 默认会把 `123` 推断为 `digit`、`true` 推断为 `bool`、`1.25` 推断为 `float`。
+  - `kvarr_raw` 默认全部保留为字符串；只有写入子字段声明的 key 才按声明类型深入解析。
+  - `kvarr_raw` 识别第一个 `=` 或 `:` 作为 key/value 分隔符；value 内后续的 `:` 会保留为字符串内容。
+- 示例：
+  ```wpl
+  rule raw_all_chars { (kvarr_raw\,) }
+  # 输入：x="a", b = 123, c = good
+  # 输出：x="a" (chars), b="123" (chars), c="good" (chars)
+
+  rule raw_with_explicit_type { (kvarr_raw(digit@b)\,) }
+  # 输入：x="a", b = 123, c = good
+  # 输出：x="a" (chars), b=123 (digit), c="good" (chars)
   ```
 
 ## 分隔符优先级与合并（sep）

@@ -1,4 +1,19 @@
 # Changelog
+## [0.3.5] - 2026-06-25
+
+### Added
+- **`kvarr_raw` parser**: Add the raw KV-array parser for high-cardinality `key=value` / `key:value` logs. Undeclared values are emitted as `chars`, while explicitly declared subfields such as `kvarr_raw(digit@port)` still run deeper typed parsing.
+- **Firewall parser benchmarks**: Extend the performance guard suite with `firewall_kv_pipe`, `firewall_kvarr_pipe`, and `firewall_kvarr_raw_pipe` cases for comparing firewall-style KV parsing paths.
+
+### Changed
+- **`kvarr` duplicate-key handling**: Replace the old post-parse `HashMap` duplicate scan with lazy duplicate tracking, so normal no-duplicate KV logs avoid the extra map-building cost.
+- **`kvarr_raw` fast path**: Add a single-character separator fast path for unquoted raw KV segments, preserve duplicate-key indexing with borrowed key tracking, and support the first `=` or `:` as the key/value delimiter.
+- **WPL docs**: Document `kvarr_raw` syntax, default `chars` behavior, explicit subfield parsing, `:` delimiter handling, and firewall-oriented performance use cases.
+
+### Fixed
+- **Duplicate key indexing**: Keep repeated `kvarr` / `kvarr_raw` keys indexed as `key[0]`, `key[1]`, ... while avoiding renaming for expanded subfields or explicitly renamed outputs.
+- **`kvarr_raw` diagnostics**: Update parse-error context to say `key=value or key:value` so diagnostics match the supported delimiters.
+
 ## [0.3.4] - 2026-06-24
 
 ### Added

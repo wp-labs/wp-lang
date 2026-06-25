@@ -51,9 +51,18 @@ JSON and KV subfields support optional member types:
 ```wpl
 json(chars@name, opt(chars)@email)
 kvarr(chars@host, digit@port, opt(chars)@user)
+kvarr_raw(digit@port)
 ```
 
 This is different from group-level `opt(...)`.
+
+`kvarr` automatically infers value types for undeclared keys. `kvarr_raw` uses the first `=` or `:` as the key/value delimiter, keeps undeclared values as `chars`, and only applies deeper parsing to explicitly declared keys:
+
+```wpl
+kvarr_raw\,             # b=123 -> b: chars("123")
+                         # url:http://host:80/path -> url: chars("http://host:80/path")
+kvarr_raw(digit@b)\,    # b=123 -> b: digit(123)
+```
 
 ---
 

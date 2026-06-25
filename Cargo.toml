@@ -1,6 +1,6 @@
 [package]
 name = "wp-lang"
-version = "0.3.4" #@gxl:set(version)
+version = "0.3.5" #@gxl:set(version)
 edition = "2024"
 description = "WPL language crate with AST, parser, evaluator, builtins, and generators."
 license = "Apache-2.0"

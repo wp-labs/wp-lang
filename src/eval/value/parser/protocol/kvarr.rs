@@ -5,7 +5,6 @@ use crate::eval::value::field_parse::FieldParse;
 use crate::eval::value::parse_def::PatternParser;
 use crate::parser::utils::{decode_escapes, interval_data, quot_str, take_kv_key, take_to_end};
 use serde_json::{Number, Value};
-use std::collections::HashMap;
 use winnow::token::{rest, take_until};
 use wp_model_core::model::FNameStr;
 
@@ -13,7 +12,17 @@ use wp_model_core::model::FNameStr;
 pub struct KvArrP {}
 impl KvArrP {}
 
+#[derive(Default, Clone)]
+pub struct KvArrRawP {}
+impl KvArrRawP {}
+
 impl DefaultSep for KvArrP {
+    fn sep_str() -> &'static str {
+        ","
+    }
+}
+
+impl DefaultSep for KvArrRawP {
     fn sep_str() -> &'static str {
         ","
     }
@@ -34,7 +43,7 @@ impl PatternParser for KvArrP {
     ) -> ModalResult<()> {
         multispace0.parse_next(data)?;
         let mut parsed = 0usize;
-        let mut emitted_ranges: Vec<(String, usize, usize)> = Vec::new();
+        let mut duplicates = DuplicateFieldTracker::default();
         let cur_sep = WplSepT::<Self>::from(ups_sep);
         loop {
             Self::consume_delimiter(data)?;
@@ -48,9 +57,7 @@ impl PatternParser for KvArrP {
                     let start_idx = out.len();
                     Self::emit_value(e_id, fpu, ups_sep, key.as_str(), value, out)?;
                     let end_idx = out.len();
-                    if end_idx > start_idx {
-                        emitted_ranges.push((key, start_idx, end_idx));
-                    }
+                    duplicates.track_owned(out, key, start_idx, end_idx);
 
                     Self::consume_trailing(data, &cur_sep)?;
                 }
@@ -78,7 +85,7 @@ impl PatternParser for KvArrP {
                 .parse_next(data);
         }
 
-        Self::rename_duplicates(out, emitted_ranges);
+        duplicates.rename(out);
         Ok(())
     }
 
@@ -293,21 +300,59 @@ impl KvArrP {
             Value::Object(obj) => Some(Value::Object(obj.clone()).to_string()),
         }
     }
+}
 
-    fn rename_duplicates(out: &mut [DataField], emitted: Vec<(String, usize, usize)>) {
-        let mut dup: HashMap<String, Vec<usize>> = HashMap::new();
-        for (key, start, end) in emitted {
-            if end == start + 1
-                && let Some(field) = out.get(start)
-                && field.get_name() == key
-            {
-                dup.entry(key).or_default().push(start);
-            }
+#[derive(Default)]
+struct DuplicateFieldTracker {
+    seen_renameable_fields: Vec<(String, usize)>,
+    duplicate_field_positions: Option<Vec<(String, Vec<usize>)>>,
+}
+
+#[derive(Default)]
+struct BorrowedDuplicateFieldTracker<'a> {
+    seen_renameable_fields: Vec<(&'a str, usize)>,
+    duplicate_field_positions: Option<Vec<(&'a str, Vec<usize>)>>,
+}
+
+impl DuplicateFieldTracker {
+    fn track_owned(&mut self, out: &[DataField], key: String, start: usize, end: usize) {
+        if !Self::is_renameable(out, key.as_str(), start, end) {
+            return;
         }
-        for (key, positions) in dup {
-            if positions.len() <= 1 {
-                continue;
-            }
+        self.track_renameable_owned(key, start);
+    }
+
+    fn is_renameable(out: &[DataField], key: &str, start: usize, end: usize) -> bool {
+        end == start + 1 && matches!(out.get(start), Some(field) if field.get_name() == key)
+    }
+
+    fn track_renameable_owned(&mut self, key: String, pos: usize) {
+        let Some((_, first_pos)) = self
+            .seen_renameable_fields
+            .iter()
+            .find(|(seen_key, _)| seen_key == &key)
+        else {
+            self.seen_renameable_fields.push((key, pos));
+            return;
+        };
+
+        let duplicates = self.duplicate_field_positions.get_or_insert_with(Vec::new);
+        if let Some((_, positions)) = duplicates
+            .iter_mut()
+            .find(|(duplicate_key, _)| duplicate_key == &key)
+        {
+            positions.push(pos);
+        } else {
+            duplicates.push((key, vec![*first_pos, pos]));
+        }
+    }
+
+    fn rename(self, out: &mut [DataField]) {
+        let Some(duplicate_field_positions) = self.duplicate_field_positions else {
+            return;
+        };
+
+        for (key, positions) in duplicate_field_positions {
             for (idx, pos) in positions.into_iter().enumerate() {
                 if let Some(field) = out.get_mut(pos) {
                     let new_name = format!("{}[{}]", key, idx);
@@ -315,6 +360,374 @@ impl KvArrP {
                 }
             }
         }
+    }
+}
+
+impl<'a> BorrowedDuplicateFieldTracker<'a> {
+    fn track(&mut self, out: &[DataField], key: &'a str, start: usize, end: usize) {
+        if !DuplicateFieldTracker::is_renameable(out, key, start, end) {
+            return;
+        }
+
+        let Some((_, first_pos)) = self
+            .seen_renameable_fields
+            .iter()
+            .find(|(seen_key, _)| *seen_key == key)
+        else {
+            self.seen_renameable_fields.push((key, start));
+            return;
+        };
+
+        let duplicates = self.duplicate_field_positions.get_or_insert_with(Vec::new);
+        if let Some((_, positions)) = duplicates
+            .iter_mut()
+            .find(|(duplicate_key, _)| *duplicate_key == key)
+        {
+            positions.push(start);
+        } else {
+            duplicates.push((key, vec![*first_pos, start]));
+        }
+    }
+
+    fn rename(self, out: &mut [DataField]) {
+        let Some(duplicate_field_positions) = self.duplicate_field_positions else {
+            return;
+        };
+
+        for (key, positions) in duplicate_field_positions {
+            for (idx, pos) in positions.into_iter().enumerate() {
+                if let Some(field) = out.get_mut(pos) {
+                    let new_name = format!("{}[{}]", key, idx);
+                    field.set_name(new_name);
+                }
+            }
+        }
+    }
+}
+
+impl PatternParser for KvArrRawP {
+    fn pattern_parse(
+        &self,
+        e_id: u64,
+        fpu: &FieldEvalUnit,
+        ups_sep: &WplSep,
+        data: &mut &str,
+        _name: FNameStr,
+        out: &mut Vec<DataField>,
+    ) -> ModalResult<()> {
+        multispace0.parse_next(data)?;
+        let out_start = out.len();
+        let mut parsed = 0usize;
+        let mut duplicates = DuplicateFieldTracker::default();
+        let cur_sep = WplSepT::<Self>::from(ups_sep);
+        if let Some(result) = Self::try_fast_literal_parse(e_id, fpu, ups_sep, data, out, &cur_sep)
+        {
+            return result;
+        }
+        loop {
+            KvArrP::consume_delimiter(data)?;
+            if data.is_empty() {
+                break;
+            }
+            let cp = data.checkpoint();
+            match Self::take_pair(data, &cur_sep) {
+                Ok((key, value)) => {
+                    parsed += 1;
+                    let start_idx = out.len();
+                    if let Err(err) =
+                        Self::emit_raw_value(e_id, fpu, ups_sep, key.as_str(), value.as_str(), out)
+                    {
+                        out.truncate(out_start);
+                        return Err(err);
+                    }
+                    let end_idx = out.len();
+                    duplicates.track_owned(out, key, start_idx, end_idx);
+                    if let Err(err) = Self::consume_trailing(data, &cur_sep) {
+                        out.truncate(out_start);
+                        return Err(err);
+                    }
+                }
+                Err(_) => {
+                    if parsed == 0 {
+                        out.truncate(out_start);
+                        return fail
+                            .context(ctx_desc(
+                                "kvarr_raw requires key=value or key:value entries",
+                            ))
+                            .parse_next(data);
+                    } else {
+                        data.reset(&cp);
+                        break;
+                    }
+                }
+            }
+        }
+        if parsed == 0 {
+            out.truncate(out_start);
+            return fail
+                .context(ctx_desc(
+                    "kvarr_raw requires key=value or key:value entries",
+                ))
+                .parse_next(data);
+        }
+        multispace0.parse_next(data)?;
+        if !data.is_empty() {
+            out.truncate(out_start);
+            return fail
+                .context(ctx_desc("kvarr_raw parse trailing characters"))
+                .parse_next(data);
+        }
+
+        duplicates.rename(out);
+        Ok(())
+    }
+
+    fn patten_gen(
+        &self,
+        _gen: &mut GenChannel,
+        _f_conf: &WplField,
+        _g_conf: Option<&FieldGenConf>,
+    ) -> WplCodeResult<DataField> {
+        unimplemented!("kvarr_raw generate")
+    }
+}
+
+impl KvArrRawP {
+    fn try_fast_literal_parse(
+        e_id: u64,
+        fpu: &FieldEvalUnit,
+        upper_sep: &WplSep,
+        data: &mut &str,
+        out: &mut Vec<DataField>,
+        sep: &WplSepT<Self>,
+    ) -> Option<ModalResult<()>> {
+        if sep.is_to_end()
+            || sep.is_pattern()
+            || sep.sep_str().len() != 1
+            || sep.sep_str().chars().any(char::is_whitespace)
+        {
+            return None;
+        }
+
+        let source = data.trim();
+        if source.is_empty() {
+            return Some(
+                fail.context(ctx_desc(
+                    "kvarr_raw requires key=value or key:value entries",
+                ))
+                .parse_next(data),
+            );
+        }
+
+        // Keep quoted/scoped values on the complete parser path. The firewall hot path
+        // is unquoted `key=value|...`, where byte scanning avoids per-pair parser setup.
+        if source.contains('"') || source.contains('\'') || source.contains('[') {
+            return None;
+        }
+
+        let sep_byte = sep.sep_str().as_bytes()[0];
+        let mut parsed = 0usize;
+        let mut duplicates = BorrowedDuplicateFieldTracker::default();
+        let out_start = out.len();
+        let mut seg_start = 0usize;
+        let source_bytes = source.as_bytes();
+        loop {
+            if seg_start == source.len() && source_bytes.last() == Some(&sep_byte) {
+                break;
+            }
+            let sep_pos = source_bytes[seg_start..]
+                .iter()
+                .position(|b| *b == sep_byte)
+                .map(|offset| seg_start + offset);
+            let seg_end = sep_pos.unwrap_or(source.len());
+            let segment = source[seg_start..seg_end].trim();
+            if segment.is_empty() {
+                out.truncate(out_start);
+                return Some(
+                    fail.context(ctx_desc(
+                        "kvarr_raw requires key=value or key:value entries",
+                    ))
+                    .parse_next(data),
+                );
+            }
+            let Some(kv_sep_idx) = segment.find(['=', ':']) else {
+                out.truncate(out_start);
+                return Some(
+                    fail.context(ctx_desc(
+                        "kvarr_raw requires key=value or key:value entries",
+                    ))
+                    .parse_next(data),
+                );
+            };
+            let key = segment[..kv_sep_idx].trim();
+            if !Self::is_valid_key(key) {
+                out.truncate(out_start);
+                return Some(
+                    fail.context(ctx_desc(
+                        "kvarr_raw requires key=value or key:value entries",
+                    ))
+                    .parse_next(data),
+                );
+            }
+            let value = segment[kv_sep_idx + 1..].trim();
+            parsed += 1;
+            let start_idx = out.len();
+            if let Err(err) = Self::emit_raw_value(e_id, fpu, upper_sep, key, value, out) {
+                out.truncate(out_start);
+                return Some(Err(err));
+            }
+            let end_idx = out.len();
+            duplicates.track(out, key, start_idx, end_idx);
+
+            match sep_pos {
+                Some(pos) => {
+                    seg_start = pos + 1;
+                    if seg_start > source.len() {
+                        break;
+                    }
+                }
+                None => break,
+            }
+        }
+
+        if parsed == 0 {
+            out.truncate(out_start);
+            return Some(
+                fail.context(ctx_desc(
+                    "kvarr_raw requires key=value or key:value entries",
+                ))
+                .parse_next(data),
+            );
+        }
+
+        *data = "";
+        duplicates.rename(out);
+        Some(Ok(()))
+    }
+
+    fn is_valid_key(key: &str) -> bool {
+        !key.is_empty()
+            && key.chars().all(|c| {
+                c.is_alphanumeric()
+                    || matches!(
+                        c,
+                        '_' | '/' | '-' | '.' | '(' | ')' | '<' | '>' | '[' | ']' | '{' | '}'
+                    )
+            })
+    }
+
+    fn take_pair(data: &mut &str, sep: &WplSepT<Self>) -> ModalResult<(String, String)> {
+        multispace0.parse_next(data)?;
+        let key = take_kv_key.parse_next(data)?;
+        multispace0.parse_next(data)?;
+        alt((literal('='), literal(':')))
+            .context(ctx_desc("kvarr_raw missing '=' or ':'"))
+            .parse_next(data)?;
+        let value = Self::take_value(data, sep)?;
+        Ok((key.to_string(), value))
+    }
+
+    fn take_value(input: &mut &str, sep: &WplSepT<Self>) -> ModalResult<String> {
+        multispace0.parse_next(input)?;
+        if input.is_empty() {
+            return Ok(String::new());
+        }
+        if let Ok(val) = quot_str.parse_next(input) {
+            return Ok(val.to_string());
+        }
+        let cp = *input;
+        if let Ok(val) = interval_data.parse_next(input) {
+            if Self::interval_ends_at_boundary(input, sep)? {
+                return Ok(decode_escapes(val));
+            }
+            *input = cp;
+        }
+        let raw = Self::take_unquoted(input, sep)?;
+        Ok(raw.trim().to_string())
+    }
+
+    fn interval_ends_at_boundary(rest: &&str, sep: &WplSepT<Self>) -> ModalResult<bool> {
+        let remainder = *rest;
+        if remainder.is_empty() {
+            return Ok(true);
+        }
+
+        if sep.is_to_end() {
+            let mut probe = remainder;
+            multispace0.parse_next(&mut probe)?;
+            return Ok(probe.is_empty());
+        }
+
+        if sep.is_pattern() {
+            let mut probe = remainder;
+            return Ok(sep.consume_sep(&mut probe).is_ok());
+        }
+
+        let mut probe = remainder;
+        let before_trim = probe.len();
+        multispace0.parse_next(&mut probe)?;
+        if probe.is_empty() {
+            return Ok(true);
+        }
+
+        if sep.is_space_sep() {
+            return Ok(probe.len() != before_trim);
+        }
+
+        Ok(probe.starts_with(sep.sep_str()))
+    }
+
+    fn take_unquoted(input: &mut &str, sep: &WplSepT<Self>) -> ModalResult<String> {
+        if sep.is_to_end() {
+            let data = take_to_end.parse_next(input)?;
+            Ok(data.to_string())
+        } else if sep.is_pattern() {
+            sep.read_until_sep(input)
+        } else {
+            let sep = sep.sep_str();
+            let data = alt((take_until(0.., sep), rest)).parse_next(input)?;
+            Ok(data.to_string())
+        }
+    }
+
+    fn emit_raw_value(
+        e_id: u64,
+        fpu: &FieldEvalUnit,
+        upper_sep: &WplSep,
+        key: &str,
+        value: &str,
+        out: &mut Vec<DataField>,
+    ) -> ModalResult<()> {
+        if let Some(sub_fpu) = fpu.get_sub_fpu(key) {
+            let mut probe = value;
+            if let Ok(extracted) = sub_fpu.conf().scope_field(&mut probe)
+                && extracted.is_empty()
+            {
+                return Ok(());
+            }
+            let mut sep = sub_fpu.conf().resolve_sep(upper_sep);
+            if sep.is_space_sep() {
+                sep.set_current("\\0");
+            }
+            let run_key = sub_fpu.conf().run_key(key);
+            let mut raw_ref = value;
+            sub_fpu.parse(e_id, &sep, &mut raw_ref, run_key, out)?;
+            return Ok(());
+        }
+        out.push(DataField::from_chars(key, value));
+        Ok(())
+    }
+
+    fn consume_trailing(data: &mut &str, sep: &WplSepT<Self>) -> ModalResult<()> {
+        multispace0.parse_next(data)?;
+        if !sep.is_to_end() {
+            if sep.is_pattern() {
+                sep.try_consume_sep(data)?;
+            } else {
+                opt(sep.sep_str()).parse_next(data)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -686,6 +1099,207 @@ mod tests {
         assert_eq!(
             record.field("b").map(|s| s.as_field()),
             Some(&DataField::from_digit("b", 1))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_raw_defaults_to_chars() -> WplCodeResult<()> {
+        let rule = r#"rule test { (kvarr_raw\|) }"#;
+        let data = "flag=true|count=42|ratio=1.25|empty=";
+        let pipe = WplEvaluator::from_code(rule)?;
+        let (record, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
+        assert_eq!(
+            record.field("flag").map(|s| s.as_field()),
+            Some(&DataField::from_chars("flag", "true"))
+        );
+        assert_eq!(
+            record.field("count").map(|s| s.as_field()),
+            Some(&DataField::from_chars("count", "42"))
+        );
+        assert_eq!(
+            record.field("ratio").map(|s| s.as_field()),
+            Some(&DataField::from_chars("ratio", "1.25"))
+        );
+        assert_eq!(
+            record.field("empty").map(|s| s.as_field()),
+            Some(&DataField::from_chars("empty", ""))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_raw_explicit_sub_field_type() -> WplCodeResult<()> {
+        let rule = r#"rule test { (kvarr_raw(digit@count, bool@flag)\|) }"#;
+        let data = "flag=true|count=42|ratio=1.25";
+        let pipe = WplEvaluator::from_code(rule)?;
+        let (record, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
+        assert_eq!(
+            record.field("flag").map(|s| s.as_field()),
+            Some(&DataField::from_bool("flag", true))
+        );
+        assert_eq!(
+            record.field("count").map(|s| s.as_field()),
+            Some(&DataField::from_digit("count", 42))
+        );
+        assert_eq!(
+            record.field("ratio").map(|s| s.as_field()),
+            Some(&DataField::from_chars("ratio", "1.25"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_raw_firewall_hot_path() -> WplCodeResult<()> {
+        let rule = r#"rule test { (time:timestamp, 3*_, kvarr_raw\|) }"#;
+        let data = r#"2018-01-30 13:12:21 Security +01:00 Block: type=FWD|action=BLOCK|srcPort=54915|tcpFlags=|url=http://example.com/resource|logVersion=1"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        let (record, residue) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
+        assert!(residue.is_empty());
+        assert_eq!(
+            record.field("type").map(|s| s.as_field()),
+            Some(&DataField::from_chars("type", "FWD"))
+        );
+        assert_eq!(
+            record.field("srcPort").map(|s| s.as_field()),
+            Some(&DataField::from_chars("srcPort", "54915"))
+        );
+        assert_eq!(
+            record.field("tcpFlags").map(|s| s.as_field()),
+            Some(&DataField::from_chars("tcpFlags", ""))
+        );
+        assert_eq!(
+            record.field("url").map(|s| s.as_field()),
+            Some(&DataField::from_chars("url", "http://example.com/resource"))
+        );
+        assert_eq!(
+            record.field("logVersion").map(|s| s.as_field()),
+            Some(&DataField::from_chars("logVersion", "1"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_raw_accepts_colon_separator() -> WplCodeResult<()> {
+        let rule = r#"rule test { (kvarr_raw\|) }"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        let (record, residue) = pipe
+            .proc(0, "action:allow|count=42|url:http://host:80/path", 0)
+            .map_err(|e| e.into_wpl_err())?;
+        assert!(residue.is_empty());
+        assert_eq!(
+            record.field("action").map(|s| s.as_field()),
+            Some(&DataField::from_chars("action", "allow"))
+        );
+        assert_eq!(
+            record.field("count").map(|s| s.as_field()),
+            Some(&DataField::from_chars("count", "42"))
+        );
+        assert_eq!(
+            record.field("url").map(|s| s.as_field()),
+            Some(&DataField::from_chars("url", "http://host:80/path"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_raw_rejects_empty_middle_segment() -> WplCodeResult<()> {
+        let rule = r#"rule test { (kvarr_raw\|) }"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        assert!(pipe.proc(0, "a=1||b=2", 0).is_err());
+        assert!(pipe.proc(0, "a=1||", 0).is_err());
+
+        let (record, residue) = pipe.proc(0, "a=1|", 0).map_err(|e| e.into_wpl_err())?;
+        assert!(residue.is_empty());
+        assert_eq!(
+            record.field("a").map(|s| s.as_field()),
+            Some(&DataField::from_chars("a", "1"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_raw_whitespace_separator_uses_full_parser() -> WplCodeResult<()> {
+        let rule = r#"rule test { (kvarr_raw\s) }"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        let (record, residue) = pipe.proc(0, "a=1  b=2", 0).map_err(|e| e.into_wpl_err())?;
+        assert!(residue.is_empty());
+        assert_eq!(
+            record.field("a").map(|s| s.as_field()),
+            Some(&DataField::from_chars("a", "1"))
+        );
+        assert_eq!(
+            record.field("b").map(|s| s.as_field()),
+            Some(&DataField::from_chars("b", "2"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_raw_rejects_invalid_fast_path_key() -> WplCodeResult<()> {
+        let rule = r#"rule test { (kvarr_raw\|) }"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        assert!(pipe.proc(0, "bad key=1|b=2", 0).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_raw_alt_failure_does_not_leak_fields() -> WplCodeResult<()> {
+        let rule = r#"rule test { alt(kvarr_raw(digit@x)\|, chars:raw\0) }"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        let (record, residue) = pipe.proc(0, "a=1|x=bad", 0).map_err(|e| e.into_wpl_err())?;
+        assert!(residue.is_empty());
+        assert!(record.field("a").is_none());
+        assert!(record.field("x").is_none());
+        assert_eq!(
+            record.field("raw").map(|s| s.as_field()),
+            Some(&DataField::from_chars("raw", "a=1|x=bad"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_raw_duplicate_keys_are_indexed_on_fast_path() -> WplCodeResult<()> {
+        let rule = r#"rule test { (kvarr_raw\|) }"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        let (record, residue) = pipe
+            .proc(0, "tag=a|tag=b", 0)
+            .map_err(|e| e.into_wpl_err())?;
+        assert!(residue.is_empty());
+        assert_eq!(
+            record.field("tag[0]").map(|s| s.as_field()),
+            Some(&DataField::from_chars("tag[0]", "a"))
+        );
+        assert_eq!(
+            record.field("tag[1]").map(|s| s.as_field()),
+            Some(&DataField::from_chars("tag[1]", "b"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_kvarr_raw_three_duplicate_keys_keep_index_order() -> WplCodeResult<()> {
+        let rule = r#"rule test { (kvarr_raw\|) }"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        let (record, residue) = pipe
+            .proc(0, "tag=a|level=info|tag=b|tag=c", 0)
+            .map_err(|e| e.into_wpl_err())?;
+        assert!(residue.is_empty());
+        assert_eq!(
+            record.field("tag[0]").map(|s| s.as_field()),
+            Some(&DataField::from_chars("tag[0]", "a"))
+        );
+        assert_eq!(
+            record.field("tag[1]").map(|s| s.as_field()),
+            Some(&DataField::from_chars("tag[1]", "b"))
+        );
+        assert_eq!(
+            record.field("tag[2]").map(|s| s.as_field()),
+            Some(&DataField::from_chars("tag[2]", "c"))
+        );
+        assert_eq!(
+            record.field("level").map(|s| s.as_field()),
+            Some(&DataField::from_chars("level", "info"))
         );
         Ok(())
     }

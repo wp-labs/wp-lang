@@ -22,6 +22,7 @@ use wp_primitives::symbol::{ctx_desc, ctx_literal};
 use wp_primitives::utils::{RestAble, get_scope};
 
 const BAD_JSON_META_NAME: &str = "bad_json";
+pub const KVARR_RAW_META_NAME: &str = "kvarr_raw";
 
 // Removed unused generic helper that depended on winnow's two-parameter ModalResult.
 // If needed later, prefer concrete `&str` + `ModalResult` signatures via wp_primitives::WResult.
@@ -33,6 +34,8 @@ fn take_meta_token<'a>(input: &mut &'a str) -> ModalResult<&'a str> {
 fn resolve_meta(token: &str) -> Option<(DataType, String)> {
     if token == BAD_JSON_META_NAME {
         Some((DataType::Chars, token.to_string()))
+    } else if token == KVARR_RAW_META_NAME {
+        Some((DataType::KvArr, token.to_string()))
     } else {
         DataType::from(token)
             .ok()

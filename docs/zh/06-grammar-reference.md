@@ -63,7 +63,7 @@ field            = [ repeat ] meta_token
 
 repeat           = [ number ] "*" ;  ; `*meta` 或 `3*meta`
 
-; 复合字段（如 json/kv/kvarr）中的子字段定义
+; 复合字段（如 json/kv/kvarr/kvarr_raw）中的子字段定义
 subfields        = "(" wsp? subfield_list_opt wsp? ")" ;
 subfield_list_opt = [ subfield { wsp? "," wsp? subfield } [ wsp? "," ] ] ;
 
@@ -80,7 +80,8 @@ subfield_meta    = meta_token | "opt" "(" wsp? key wsp? ")" ;
 
 ; meta_token 由实现中的 `resolve_meta()` 决定：
 ; 1. `bad_json`
-; 2. 或 `wp_model_core::model::DataType::from(token)` 可识别的类型
+; 2. `kvarr_raw`（运行时使用 raw KV 数组解析器，语法形态等同 `kvarr`）
+; 3. 或 `wp_model_core::model::DataType::from(token)` 可识别的类型
 meta_token       = meta_char { meta_char } ;
 
 ; 仅 symbol / peek_symbol 允许内容，例如 `symbol(OK)`

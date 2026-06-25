@@ -63,7 +63,7 @@ field            = [ repeat ] meta_token
 
 repeat           = [ number ] "*" ;  ; `*meta` or `3*meta`
 
-; Subfield definitions inside composite fields such as json/kv/kvarr
+; Subfield definitions inside composite fields such as json/kv/kvarr/kvarr_raw
 subfields         = "(" wsp? subfield_list_opt wsp? ")" ;
 subfield_list_opt = [ subfield { wsp? "," wsp? subfield } [ wsp? "," ] ] ;
 
@@ -80,7 +80,8 @@ subfield_meta    = meta_token | "opt" "(" wsp? key wsp? ")" ;
 
 ; meta_token is controlled by `resolve_meta()` in the implementation:
 ; 1. `bad_json`
-; 2. or anything recognized by `wp_model_core::model::DataType::from(token)`
+; 2. `kvarr_raw` (runtime dispatches to the raw KV-array parser; syntax shape matches `kvarr`)
+; 3. or anything recognized by `wp_model_core::model::DataType::from(token)`
 meta_token       = meta_char { meta_char } ;
 
 ; Only symbol / peek_symbol may carry content, e.g. `symbol(OK)`
