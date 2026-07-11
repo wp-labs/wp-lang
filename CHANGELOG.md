@@ -1,4 +1,9 @@
 # Changelog
+## [0.4.0] - 2026-07-08
+
+### Changed
+- **Dependencies**: Upgraded `wp-connector-api` `0.10` → `0.11`
+
 ## [0.3.5] - 2026-06-25
 
 ### Added
