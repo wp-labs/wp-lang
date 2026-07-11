@@ -2,9 +2,9 @@ use crate::WparseError;
 use crate::ast::AnnFun;
 use smol_str::SmolStr;
 use std::collections::BTreeMap;
-use wp_connector_api::SourceEvent;
 use wp_model_core::model::{DataField, DataRecord};
 use wp_model_core::raw::RawData;
+use wp_source_types::SourceEvent;
 
 pub trait AnnotationFunc {
     fn proc(&self, src: &SourceEvent, data: &mut DataRecord) -> Result<(), WparseError>;
@@ -110,9 +110,9 @@ mod tests {
     use orion_error::dev::testing::TestAssert;
     use std::collections::BTreeMap;
     use std::sync::Arc;
-    use wp_connector_api::{SourceEvent, Tags};
     use wp_model_core::model::DataRecord;
     use wp_model_core::raw::RawData;
+    use wp_source_types::{SourceEvent, Tags};
 
     #[test]
     fn test_tag_fun() {
