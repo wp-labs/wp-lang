@@ -164,6 +164,7 @@ mod tests {
             tags: BTreeMap::from([("tag_1".into(), "x".into())]),
             copy_raw: None,
             copy_event_parse: None,
+            no_match: false,
         };
         let tag = AnnotationType::convert(&Some(ann));
         let mut data = DataRecord::test_value();
@@ -184,6 +185,7 @@ mod tests {
             tags: Default::default(),
             copy_raw: Some(("name".into(), "raw".into())),
             copy_event_parse: None,
+            no_match: false,
         };
         let tag = AnnotationType::convert(&Some(ann));
         let mut data = DataRecord::test_value();
@@ -241,6 +243,7 @@ mod tests {
             tags: Default::default(),
             copy_raw: Some(("name".into(), raw_key.into())),
             copy_event_parse: None,
+            no_match: false,
         }))
     }
 
@@ -252,6 +255,7 @@ mod tests {
             tags: Default::default(),
             copy_raw: None,
             copy_event_parse: Some(rule_name.into()),
+            no_match: false,
         }));
         for ann in &mut funcs {
             if let AnnotationType::CopyEventParse(c) = ann {
@@ -285,6 +289,7 @@ mod tests {
             tags: Default::default(),
             copy_raw: None,
             copy_event_parse: Some("raw_event".into()),
+            no_match: false,
         }));
         let mut data = DataRecord::test_value();
         let src = SourceEvent::new(

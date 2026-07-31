@@ -16,12 +16,15 @@ pub enum AnnEnum {
     Tags(TagKvs),
     Copy(CopyRaw),
     CopyEventParse(SmolStr),
+    NoMatch,
 }
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct AnnFun {
     pub tags: TagKvs,
     pub copy_raw: Option<CopyRaw>,
     pub copy_event_parse: Option<SmolStr>,
+    /// 显式声明：该 rule 不参与 parse_event 自动匹配（仅作 copy_event_parse 等显式调用的目标）。
+    pub no_match: bool,
 }
 
 impl MergeTags for AnnFun {
@@ -39,6 +42,8 @@ impl MergeTags for AnnFun {
             if self.copy_event_parse.is_none() {
                 self.copy_event_parse = atags.copy_event_parse.clone()
             }
+            // no_match 取并集：任一层声明即生效
+            self.no_match = self.no_match || atags.no_match;
         }
     }
 }
@@ -94,6 +99,9 @@ impl DebugFormat for AnnFun {
             self.write_open_parenthesis(w)?;
             write!(w, "rule:\"{}\"", rule)?;
             self.write_close_parenthesis(w)?;
+        }
+        if self.no_match {
+            write!(w, ", no_match")?;
         }
         write!(w, "]")?;
         self.write_new_line(w)?;

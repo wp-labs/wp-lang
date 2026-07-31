@@ -1,8 +1,9 @@
 # Changelog
-## [0.4.1 Unreleased]
+## [0.4.1] - 2026-07-31
 
 ### Added
 - **`copy_event_parse` annotation**: Add a cross-rule annotation `#[copy_event_parse(rule:"<rule_name>")]` that copies the raw payload to a same-package rule's parser and merges the produced fields into the current record. The target rule is parsed only; its own annotations are not executed. `CopyEventParseAnnotation` holds an `Option<WplEvaluator>` target injected at build time by the motor layer via `rule_name`, and at runtime uses `WplEvaluator::proc_ref` to avoid cloning the payload per event. Touches `AnnEnum`/`AnnFun` variants, the `wpl_anno` parser, the `ann_func` impl, and `AnnotationType::convert` assembly.
+- **`no_match` annotation**: Add a rule-level flag annotation `#[no_match]` that explicitly declares a rule does not participate in `parse_event` auto-matching. Such rules are skipped when assembling the auto-match pipeline set (their parser is still built for `copy_event_parse` target resolution), preventing designated parse rules from directly matching events and shadowing the referencing rule. Added `AnnEnum::NoMatch` / `AnnFun.no_match` (merge takes the union), a bare `no_match` parser branch, and `DebugFormat` rendering. The flag is metadata consumed by the motor assembly layer, not an executable `AnnotationFunc`.
 
 ## [0.4.0] - 2026-07-08
 

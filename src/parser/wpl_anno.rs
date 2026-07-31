@@ -51,6 +51,12 @@ fn copy_event_parse(input: &mut &str) -> WResult<AnnEnum> {
     Ok(AnnEnum::CopyEventParse(v))
 }
 
+fn no_match(input: &mut &str) -> WResult<AnnEnum> {
+    // no_match —— 无参 flag 注解，显式声明该 rule 不参与 parse_event 自动匹配
+    (multispace0, literal("no_match")).parse_next(input)?;
+    Ok(AnnEnum::NoMatch)
+}
+
 pub fn ann_fun(input: &mut &str) -> WResult<AnnFun> {
     multispace0.parse_next(input)?;
     literal("#[")
@@ -58,7 +64,7 @@ pub fn ann_fun(input: &mut &str) -> WResult<AnnFun> {
         .parse_next(input)?;
     let x: Vec<AnnEnum> = separated(
         0..,
-        alt((wpl_tags, copy_raw, copy_event_parse)),
+        alt((wpl_tags, copy_raw, copy_event_parse, no_match)),
         literal(","),
     )
     .parse_next(input)?;
@@ -79,6 +85,9 @@ pub fn ann_fun(input: &mut &str) -> WResult<AnnFun> {
             AnnEnum::CopyEventParse(v) => {
                 af.copy_event_parse = Some(v);
             }
+            AnnEnum::NoMatch => {
+                af.no_match = true;
+            }
         }
     }
     Ok(af)
@@ -90,7 +99,7 @@ mod tests {
 
     use crate::ast::{AnnEnum, AnnFun};
     use crate::parser::utils::take_tag_kv;
-    use crate::parser::wpl_anno::{ann_fun, copy_event_parse, wpl_tags};
+    use crate::parser::wpl_anno::{ann_fun, copy_event_parse, no_match, wpl_tags};
     use orion_error::dev::testing::TestAssert;
     use wp_primitives::Parser;
 
@@ -168,6 +177,7 @@ mod tests {
                 ]),
                 copy_raw: Some(("name".into(), "tq".into())),
                 copy_event_parse: None,
+                no_match: false,
             }
         );
 
@@ -186,6 +196,7 @@ mod tests {
                 ]),
                 copy_raw: None,
                 copy_event_parse: None,
+                no_match: false,
             }
         );
 
@@ -201,6 +212,7 @@ mod tests {
                 tags: Default::default(),
                 copy_raw: Some(("name".into(), "tq".into())),
                 copy_event_parse: None,
+                no_match: false,
             }
         );
     }
@@ -226,6 +238,40 @@ mod tests {
                 tags: Default::default(),
                 copy_raw: None,
                 copy_event_parse: Some("raw_event".into()),
+                no_match: false,
+            }
+        );
+    }
+
+    #[test]
+    fn test_no_match() {
+        assert_eq!(no_match.parse("no_match").assert(), AnnEnum::NoMatch);
+
+        // 纯 flag 注解，无参数
+        assert_eq!(
+            ann_fun
+                .parse(
+                    r#"
+            #[no_match]
+            "#
+                )
+                .assert(),
+            AnnFun {
+                tags: Default::default(),
+                copy_raw: None,
+                copy_event_parse: None,
+                no_match: true,
+            }
+        );
+
+        // 与其它注解混用
+        assert_eq!(
+            ann_fun.parse(r#"#[no_match, copy_raw(name:"tq")]"#).assert(),
+            AnnFun {
+                tags: Default::default(),
+                copy_raw: Some(("name".into(), "tq".into())),
+                copy_event_parse: None,
+                no_match: true,
             }
         );
     }
