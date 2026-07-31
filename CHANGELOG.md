@@ -1,4 +1,10 @@
 # Changelog
+## [0.4.3 Unreleased]
+
+### Changed
+- **`copy_event_parse` now emits an independent record instead of merging**: `CopyEventParseAnnotation::proc` no longer `merge`s the target rule's parsed record into the current record. It returns the target's parse as a side record `(rule_name, DataRecord)`, which the engine routes independently under the target's wpl_key (e.g. `/fun/raw_event`) to its own sink. This lets a `copy_event_parse` target produce a separate output stream rather than augmenting the referencing rule's record.
+- **`AnnotationFunc::proc` signature**: Return type changed from `Result<(), WparseError>` to `Result<SideRecords, WparseError>` where `SideRecords = Vec<(SmolStr, DataRecord)>`. Annotations can now emit independently-routed side records in addition to mutating the current record. `Tag`/`Copy`/`Noop` return an empty `Vec`; `CopyEventParse` returns its target record. `SideRecords` is re-exported from the crate root.
+
 ## [0.4.1] - 2026-07-31
 
 ### Added

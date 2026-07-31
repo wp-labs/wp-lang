@@ -266,7 +266,9 @@ mod tests {
 
         // 与其它注解混用
         assert_eq!(
-            ann_fun.parse(r#"#[no_match, copy_raw(name:"tq")]"#).assert(),
+            ann_fun
+                .parse(r#"#[no_match, copy_raw(name:"tq")]"#)
+                .assert(),
             AnnFun {
                 tags: Default::default(),
                 copy_raw: Some(("name".into(), "tq".into())),

@@ -7,8 +7,14 @@ use wp_model_core::model::{DataField, DataRecord};
 use wp_model_core::raw::RawData;
 use wp_source_types::SourceEvent;
 
+/// 注解执行产出的旁路 record：(wpl_key, record)。
+/// 由 engine 层按 `wpl_key` 独立路由到对应 sink（不并入当前 rule 的 record）。
+/// 目前仅 `CopyEventParse` 产出旁路 record——目标 rule 的解析结果作为一条新 record 流出。
+pub type SideRecords = Vec<(SmolStr, DataRecord)>;
+
 pub trait AnnotationFunc {
-    fn proc(&self, src: &SourceEvent, data: &mut DataRecord) -> Result<(), WparseError>;
+    /// 执行注解：就地修改 `data`（当前 record），并返回要独立路由的旁路 record。
+    fn proc(&self, src: &SourceEvent, data: &mut DataRecord) -> Result<SideRecords, WparseError>;
 }
 
 #[derive(Clone, Debug)]
@@ -17,11 +23,11 @@ pub struct TagAnnotation {
 }
 
 impl AnnotationFunc for TagAnnotation {
-    fn proc(&self, _src: &SourceEvent, data: &mut DataRecord) -> Result<(), WparseError> {
+    fn proc(&self, _src: &SourceEvent, data: &mut DataRecord) -> Result<SideRecords, WparseError> {
         for (key, val) in &self.args {
             data.append(DataField::from_chars(key.clone(), val.clone()));
         }
-        Ok(())
+        Ok(SideRecords::new())
     }
 }
 
@@ -29,8 +35,8 @@ impl AnnotationFunc for TagAnnotation {
 pub struct NoopAnnotation;
 
 impl AnnotationFunc for NoopAnnotation {
-    fn proc(&self, _src: &SourceEvent, _data: &mut DataRecord) -> Result<(), WparseError> {
-        Ok(())
+    fn proc(&self, _src: &SourceEvent, _data: &mut DataRecord) -> Result<SideRecords, WparseError> {
+        Ok(SideRecords::new())
     }
 }
 
@@ -40,7 +46,7 @@ pub struct RawCopy {
 }
 
 impl AnnotationFunc for RawCopy {
-    fn proc(&self, src: &SourceEvent, data: &mut DataRecord) -> Result<(), WparseError> {
+    fn proc(&self, src: &SourceEvent, data: &mut DataRecord) -> Result<SideRecords, WparseError> {
         match &src.payload {
             RawData::String(raw) => {
                 data.append(DataField::from_chars(self.raw_key.clone(), raw.clone()));
@@ -58,14 +64,15 @@ impl AnnotationFunc for RawCopy {
                 ));
             }
         }
-        Ok(())
+        Ok(SideRecords::new())
     }
 }
 
-/// 将原始 payload 复制给指定 rule 的 parser 解析，把产出的字段并入当前 record。
+/// 将原始 payload 复制给指定 rule 的 parser 解析，产出一条**独立的旁路 record**。
 ///
-/// `target` 在构建期由 motor 层注入（按 `rule_name` 解析同包 rule 的 parser）；
-/// 未注入时（如 editor/station 解析路径）`proc` 直接 no-op。
+/// 与并入主 record 不同：目标 rule 的解析结果作为一条新 record 流出，由 engine 层
+/// 按 `rule_name`（即目标 rule 的 wpl_key，如 `/fun/raw_event`）独立路由到对应 sink。
+/// `target` 在构建期由 motor 层注入；未注入时（如 editor/station 解析路径）no-op。
 /// 目标 rule 只解析，不执行其自身注解。
 #[derive(Clone)]
 pub struct CopyEventParseAnnotation {
@@ -83,15 +90,14 @@ impl std::fmt::Debug for CopyEventParseAnnotation {
 }
 
 impl AnnotationFunc for CopyEventParseAnnotation {
-    fn proc(&self, src: &SourceEvent, data: &mut DataRecord) -> Result<(), WparseError> {
+    fn proc(&self, src: &SourceEvent, _data: &mut DataRecord) -> Result<SideRecords, WparseError> {
         let Some(target) = &self.target else {
-            return Ok(());
+            return Ok(SideRecords::new());
         };
         // 复制 src.payload 喂给目标 rule 的 parser（proc_ref 避免每条事件 clone payload）
         let (target_rec, _left) = target.proc_ref(src.event_id, &src.payload, 0)?;
-        // 把目标 rule 解析产出的字段并入当前 record
-        data.merge(target_rec);
-        Ok(())
+        // 产出独立旁路 record：按 rule_name（目标 rule 的 wpl_key）独立路由
+        Ok(vec![(self.rule_name.clone(), target_rec)])
     }
 }
 
@@ -104,7 +110,7 @@ pub enum AnnotationType {
 }
 
 impl AnnotationFunc for AnnotationType {
-    fn proc(&self, src: &SourceEvent, data: &mut DataRecord) -> Result<(), WparseError> {
+    fn proc(&self, src: &SourceEvent, data: &mut DataRecord) -> Result<SideRecords, WparseError> {
         match self {
             AnnotationType::Tag(func) => func.proc(src, data),
             AnnotationType::Null(func) => func.proc(src, data),
@@ -266,7 +272,7 @@ mod tests {
     }
 
     #[test]
-    fn test_copy_event_parse_merges_target_fields() {
+    fn test_copy_event_parse_emits_side_record() {
         // 目标 rule：解析 JSON {"raw":"..."} 产出名为 raw 的 chars 字段
         let funcs =
             copy_event_parse_with_target(r#"rule raw_event { (json(chars@raw)) }"#, "raw_event");
@@ -277,9 +283,17 @@ mod tests {
             RawData::String(r#"{ "raw": "payload-content" }"#.to_string()),
             Tags::new().into(),
         );
-        funcs.first().unwrap().proc(&src, &mut data).unwrap();
+        let sides = funcs.first().unwrap().proc(&src, &mut data).unwrap();
+        // emit：目标解析结果作为独立旁路 record 返回，不并入主 record
+        assert!(
+            data.field("raw").is_none(),
+            "target fields must NOT merge into main record"
+        );
+        assert_eq!(sides.len(), 1);
+        let (key, rec) = &sides[0];
+        assert_eq!(key.as_str(), "raw_event");
         let expected = DataField::from_chars("raw", "payload-content");
-        assert_eq!(data.field("raw").map(|s| s.as_field()), Some(&expected));
+        assert_eq!(rec.field("raw").map(|s| s.as_field()), Some(&expected));
     }
 
     #[test]

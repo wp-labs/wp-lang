@@ -28,7 +28,7 @@ pub use ast::WplCode;
 pub use ast::WplRule;
 pub use ast::WplSep;
 pub use ast::WplStatementType;
-pub use ast::ann_func::{AnnotationFunc, AnnotationType};
+pub use ast::ann_func::{AnnotationFunc, AnnotationType, SideRecords};
 pub use ast::{SepPattern, build_pattern};
 pub use ast::{WplExpress, WplPackage, WplPkgMeta};
 pub use eval::DataTypeParser;
