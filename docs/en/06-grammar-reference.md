@@ -130,9 +130,11 @@ fun_call         = "take" "(" wsp? take_target wsp? ")"
                  | "not" "(" wsp? fun_call wsp? ")" ;
 
 annotation       = "#[" wsp? annotation_item { wsp? "," wsp? annotation_item } wsp? "]" ;
-annotation_item  = tag_annotation | copy_raw_annotation ;
+annotation_item  = tag_annotation | copy_raw_annotation | copy_event_parse_annotation | no_match_annotation ;
 tag_annotation   = "tag" "(" wsp? tag_kv { wsp? "," wsp? tag_kv } wsp? ")" ;
 copy_raw_annotation = "copy_raw" "(" wsp? tag_kv wsp? ")" ;
+copy_event_parse_annotation = "copy_event_parse" "(" wsp? tag_kv wsp? ")" ;
+no_match_annotation = "no_match" ;
 tag_kv           = key wsp? ":" wsp? ( quoted_string | raw_string ) ;
 
 take_target      = key | quoted_string ;

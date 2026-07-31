@@ -130,9 +130,11 @@ fun_call         = "take" "(" wsp? take_target wsp? ")"
                  | "not" "(" wsp? fun_call wsp? ")" ;
 
 annotation       = "#[" wsp? annotation_item { wsp? "," wsp? annotation_item } wsp? "]" ;
-annotation_item  = tag_annotation | copy_raw_annotation ;
+annotation_item  = tag_annotation | copy_raw_annotation | copy_event_parse_annotation | no_match_annotation ;
 tag_annotation   = "tag" "(" wsp? tag_kv { wsp? "," wsp? tag_kv } wsp? ")" ;
 copy_raw_annotation = "copy_raw" "(" wsp? tag_kv wsp? ")" ;
+copy_event_parse_annotation = "copy_event_parse" "(" wsp? tag_kv wsp? ")" ;
+no_match_annotation = "no_match" ;
 tag_kv           = key wsp? ":" wsp? ( quoted_string | raw_string ) ;
 
 take_target      = key | quoted_string ;
@@ -235,9 +237,11 @@ wsp1             = ( " " | "\t" | "\n" | "\r" ) { wsp } ;
 
 ### 注解
 
-- 当前只有两个注解函数：
-  - `tag(k: "v")`
-  - `copy_raw(name: "raw_field")`
+- 注解函数：
+  - `tag(k: "v")`：向 record 追加 tag 字段。
+  - `copy_raw(name: "raw_field")`：把原始 payload 复制为指定字段并入当前 record。
+  - `copy_event_parse(rule: "pkg/rule")`：把原始 payload 复制给目标 rule 的 parser 解析，产出**独立的旁路 record**（按目标 `wpl_key` 独立路由到 sink，不并入当前 record）。目标 rule 通常标 `#[no_match]`。
+  - `no_match`：flag 注解，声明该 rule 不参与 `parse_event` 自动匹配（仅作 `copy_event_parse` 等显式调用目标，但仍建 pipeline 供 sink 路由）。
 - 注解值支持：
   - 普通引号字符串
   - 原始字符串 `r#"..."#`

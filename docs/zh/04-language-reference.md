@@ -12,7 +12,7 @@
 | [语法元素](#-语法元素) | 基本结构、字段定义、格式控制 |
 | [子字段语法](#-子字段语法) | JSON、KV、数组子字段 |
 | [JSON-like 路由](#-json-like-路由) | `json_like`、`json`、`bad_json` 的配合方式 |
-| [注解](#-注解) | tag、copy_raw 注解 |
+| [注解](#-注解) | tag、copy_raw、copy_event_parse、no_match 注解 |
 | [语法速查](#-语法速查) | 常用模式快速参考 |
 
 ---
@@ -23,7 +23,7 @@
 
 | # | 类型 | 标识符 | 样例 | 说明 |
 |---|------|--------|------|------|
-| 1 | 预读符号 | `peek_symbol(xxx)` | `peek_symbol(GET)` | 预读但不消费 |
+| 1 | 预读符号 | `peek_symbol(xxx)` | `peek_symbol(GET)` | 预读但不消费（解析后规整为 `symbol`，保留 peek 语义） |
 | 2 | 忽略 | `_` | `_`, `2*_`, `3*_` | 忽略该字段 |
 | 3 | 符号 | `symbol(xxx)` | `symbol(HTTP)` | 精确匹配 |
 | 4 | 布尔 | `bool` | `true`, `false` | 布尔值 |
@@ -40,7 +40,7 @@
 | 10 | ISO 8601 | `time_iso` | `2023-05-15T07:09:12Z` | ISO 8601 标准 |
 | 11 | RFC 3339 | `time_3339` | `2022-03-21T12:34:56+00:00` | RFC3339 标准 |
 | 12 | RFC 2822 | `time_2822` | `Mon, 07 Jul 2025 09:20:32 +0000` | 邮件时间格式 |
-| 13 | CLF 时间 | `time/clf` | `06/Aug/2019:12:12:19 +0800` | Apache/Nginx 日志 |
+| 13 | CLF 时间 | `time_clf` | `06/Aug/2019:12:12:19 +0800` | Apache/Nginx 日志 |
 | 14 | Unix时间戳 | `time_timestamp` | `1647849600` | Unix 秒级时间戳 |
 
 ### 网络类型
@@ -67,30 +67,31 @@
 |---|------|--------|------|------|
 | 23 | 键值对 | `kvarr` | `key=value` | KV 格式，默认自动类型推断 |
 | 24 | 快速键值对 | `kvarr_raw` | `key=value` | KV 格式，默认 value 按 `chars` 输出 |
-| 25 | JSON | `json` | `{"k":"v"}` | JSON 对象 |
-| 26 | 严格JSON | `exact_json` | `{"k":"v"}` | 严格验证 JSON |
-| 27 | 对象 | `obj` | 嵌套对象 | 通用对象 |
-| 28 | 数组 | `array` | `[1,2,3]` | 数组 |
-| 29 | 数字数组 | `array/digit` | `[1,2,3]` | 数字数组 |
-| 30 | 字符串数组 | `array/chars` | `["a","b"]` | 字符串数组 |
+| 25 | 单键值对 | `kv` | `key=value` | 单个 key=value 对 |
+| 26 | JSON | `json` | `{"k":"v"}` | JSON 对象 |
+| 27 | 严格JSON | `exact_json` | `{"k":"v"}` | 严格验证 JSON |
+| 28 | 坏JSON | `bad_json` | `{"k":"v"` | 按原始文本接受（输出类型 `chars`） |
+| 29 | 数组 | `array` | `[1,2,3]` | 数组 |
+| 30 | 数字数组 | `array/digit` | `[1,2,3]` | 数字数组 |
+| 31 | 字符串数组 | `array/chars` | `["a","b"]` | 字符串数组 |
 
 ### 协议类型
 
 | # | 类型 | 标识符 | 样例 | 说明 |
 |---|------|--------|------|------|
-| 30 | HTTP请求 | `http/request` | `GET /path HTTP/1.1` | HTTP 请求行 |
-| 31 | HTTP状态 | `http/status` | `200`, `404` | HTTP 状态码 |
-| 32 | User-Agent | `http/agent` | `Mozilla/5.0...` | 浏览器 UA |
-| 33 | HTTP方法 | `http/method` | `GET`, `POST` | HTTP 方法 |
+| 32 | HTTP请求 | `http/request` | `GET /path HTTP/1.1` | HTTP 请求行 |
+| 33 | HTTP状态 | `http/status` | `200`, `404` | HTTP 状态码 |
+| 34 | User-Agent | `http/agent` | `Mozilla/5.0...` | 浏览器 UA |
+| 35 | HTTP方法 | `http/method` | `GET`, `POST` | HTTP 方法 |
 
 ### 特殊类型
 
 | # | 类型 | 标识符 | 样例 | 说明 |
 |---|------|--------|------|------|
-| 34 | 身份证 | `id_card` | `110101199001011234` | 18 位身份证 |
-| 35 | 手机号 | `mobile_phone` | `13800138000` | 11 位手机号 |
-| 36 | 协议文本 | `proto_text` | 协议格式 | 协议文本解析 |
-| 37 | 自动识别 | `auto` | 自动推断 | 自动类型推断 |
+| 36 | 身份证 | `id_card` | `110101199001011234` | 18 位身份证 |
+| 37 | 手机号 | `mobile_phone` | `13800138000` | 11 位手机号 |
+| 38 | 协议文本 | `proto_text` | 协议格式 | 协议文本解析 |
+| 39 | 自动识别 | `auto` | 自动推断 | 自动类型推断 |
 
 ---
 
@@ -318,6 +319,33 @@ rule nginx_log {
   (ip, time, chars)
 }
 ```
+
+### copy_event_parse 注解
+
+把原始 payload 复制给指定 rule 的 parser 解析，产出一条**独立的旁路 record**（不并入当前 record），由引擎按目标 rule 的 `wpl_key` 独立路由到对应 sink。
+
+```wpl
+#[copy_event_parse(rule:"/fun/raw_event")]
+rule main { (json(chars@data)) }
+```
+
+- `rule` 的值是目标 rule 的引用：跨包用全路径 `pkg/rule`（如 `/fun/raw_event`），同包可用裸名（如 `raw_event`，引擎会按当前包名补全为全路径）。
+- 目标 rule 只解析、不执行其自身注解。
+- 目标 rule 通常标 `#[no_match]`（见下），避免它参与 `parse_event` 自动匹配抢在引用方之前产出残缺 record；但其 parser 仍由引擎保留供本注解注入。
+- 旁路 record 与主 record 一样盖事件 meta（`wp_event_id` / `wp_src_key` / `wp_event_md5` 等），可用于跨 sink 关联。
+- 引用不存在的 rule 是逻辑错误，引擎拒绝启动。
+
+### no_match 注解
+
+显式声明该 rule 不参与 `parse_event` 自动匹配。这类 rule 仅作 `copy_event_parse` 等显式调用的目标，不直接匹配事件。
+
+```wpl
+#[no_match]
+rule raw_event { (chars\0) }
+```
+
+- 装配时仍为它建 pipeline（含 sink 绑定），供旁路 record 经其 `wpl_key` 路由；只是 `parse_event` 跳过它不自动匹配。
+- 无参数 flag 注解。
 
 ### 原始字符串（避免转义）
 

@@ -18,7 +18,7 @@ Examples:
 
 ```wpl
 digit:status
-time/clf:time<[,]>
+time_clf:time<[,]>
 http/request:request"
 json(chars@name, opt(chars)@email)
 ```
@@ -128,7 +128,7 @@ Behavior:
 Valid:
 
 ```wpl
-time/clf:time<[,]>
+time_clf:time<[,]>
 http/request:request"
 alt(ip:addr, chars:addr)
 ```
@@ -136,7 +136,7 @@ alt(ip:addr, chars:addr)
 Invalid:
 
 ```wpl
-time/clf<[,]>:time
+time_clf<[,]>:time
 http/request":request
 one_of(ip, chars)
 ```
