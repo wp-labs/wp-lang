@@ -1,4 +1,9 @@
 # Changelog
+## [0.4.1 Unreleased]
+
+### Added
+- **`copy_event_parse` annotation**: Add a cross-rule annotation `#[copy_event_parse(rule:"<rule_name>")]` that copies the raw payload to a same-package rule's parser and merges the produced fields into the current record. The target rule is parsed only; its own annotations are not executed. `CopyEventParseAnnotation` holds an `Option<WplEvaluator>` target injected at build time by the motor layer via `rule_name`, and at runtime uses `WplEvaluator::proc_ref` to avoid cloning the payload per event. Touches `AnnEnum`/`AnnFun` variants, the `wpl_anno` parser, the `ann_func` impl, and `AnnotationType::convert` assembly.
+
 ## [0.4.0] - 2026-07-08
 
 ### Changed

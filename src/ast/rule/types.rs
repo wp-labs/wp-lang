@@ -177,7 +177,7 @@ impl DebugFormat for WplRule {
         }
         self.write_indent(w, depth)?;
 
-        write!(w, "rule {} ", &self.name)?;
+        write!(w, "rule {} ", self.name)?;
         self.write_open_brace(w)?;
         self.write_new_line(w)?;
         self.statement.write(w)?;

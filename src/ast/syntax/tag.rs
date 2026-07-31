@@ -15,11 +15,13 @@ pub type CopyRaw = (SmolStr, SmolStr);
 pub enum AnnEnum {
     Tags(TagKvs),
     Copy(CopyRaw),
+    CopyEventParse(SmolStr),
 }
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct AnnFun {
     pub tags: TagKvs,
     pub copy_raw: Option<CopyRaw>,
+    pub copy_event_parse: Option<SmolStr>,
 }
 
 impl MergeTags for AnnFun {
@@ -33,6 +35,9 @@ impl MergeTags for AnnFun {
 
             if self.copy_raw.is_none() {
                 self.copy_raw = atags.copy_raw.clone()
+            }
+            if self.copy_event_parse.is_none() {
+                self.copy_event_parse = atags.copy_event_parse.clone()
             }
         }
     }
@@ -82,6 +87,12 @@ impl DebugFormat for AnnFun {
             write!(w, ", copy_raw")?;
             self.write_open_parenthesis(w)?;
             write!(w, "{}:\"{}\"", ck, cv)?;
+            self.write_close_parenthesis(w)?;
+        }
+        if let Some(rule) = &self.copy_event_parse {
+            write!(w, ", copy_event_parse")?;
+            self.write_open_parenthesis(w)?;
+            write!(w, "rule:\"{}\"", rule)?;
             self.write_close_parenthesis(w)?;
         }
         write!(w, "]")?;

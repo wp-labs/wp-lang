@@ -35,13 +35,33 @@ fn copy_raw(input: &mut &str) -> WResult<AnnEnum> {
     Ok(AnnEnum::Copy(obj))
 }
 
+fn copy_event_parse(input: &mut &str) -> WResult<AnnEnum> {
+    // copy_event_parse(rule:"<rule_name>") —— 约定 key 为 "rule"，取其值作为目标 rule 名
+    let (_, v) = delimited(
+        (
+            multispace0,
+            literal("copy_event_parse"),
+            multispace0,
+            literal('('),
+        ),
+        cut_err(utils::take_tag_kv).context(ctx_desc("copy_event_parse(rule: \"...\")")),
+        (multispace0, literal(')')),
+    )
+    .parse_next(input)?;
+    Ok(AnnEnum::CopyEventParse(v))
+}
+
 pub fn ann_fun(input: &mut &str) -> WResult<AnnFun> {
     multispace0.parse_next(input)?;
     literal("#[")
         .context(ctx_desc("annotation start"))
         .parse_next(input)?;
-    let x: Vec<AnnEnum> =
-        separated(0.., alt((wpl_tags, copy_raw)), literal(",")).parse_next(input)?;
+    let x: Vec<AnnEnum> = separated(
+        0..,
+        alt((wpl_tags, copy_raw, copy_event_parse)),
+        literal(","),
+    )
+    .parse_next(input)?;
     multispace0.parse_next(input)?;
     literal("]")
         .context(ctx_desc("annotation end"))
@@ -56,6 +76,9 @@ pub fn ann_fun(input: &mut &str) -> WResult<AnnFun> {
             AnnEnum::Tags(v) => {
                 af.tags = v;
             }
+            AnnEnum::CopyEventParse(v) => {
+                af.copy_event_parse = Some(v);
+            }
         }
     }
     Ok(af)
@@ -67,7 +90,7 @@ mod tests {
 
     use crate::ast::{AnnEnum, AnnFun};
     use crate::parser::utils::take_tag_kv;
-    use crate::parser::wpl_anno::{ann_fun, wpl_tags};
+    use crate::parser::wpl_anno::{ann_fun, copy_event_parse, wpl_tags};
     use orion_error::dev::testing::TestAssert;
     use wp_primitives::Parser;
 
@@ -144,6 +167,7 @@ mod tests {
                     ("cc_y".into(), "qw_/e".into())
                 ]),
                 copy_raw: Some(("name".into(), "tq".into())),
+                copy_event_parse: None,
             }
         );
 
@@ -161,6 +185,7 @@ mod tests {
                     ("cc_y".into(), "qw_/e".into())
                 ]),
                 copy_raw: None,
+                copy_event_parse: None,
             }
         );
 
@@ -175,6 +200,32 @@ mod tests {
             AnnFun {
                 tags: Default::default(),
                 copy_raw: Some(("name".into(), "tq".into())),
+                copy_event_parse: None,
+            }
+        );
+    }
+
+    #[test]
+    fn test_copy_event_parse() {
+        assert_eq!(
+            copy_event_parse
+                .parse(r#"copy_event_parse(rule:"raw_event")"#)
+                .assert(),
+            AnnEnum::CopyEventParse("raw_event".into())
+        );
+
+        assert_eq!(
+            ann_fun
+                .parse(
+                    r#"
+            #[copy_event_parse(rule:"raw_event")]
+            "#
+                )
+                .assert(),
+            AnnFun {
+                tags: Default::default(),
+                copy_raw: None,
+                copy_event_parse: Some("raw_event".into()),
             }
         );
     }
