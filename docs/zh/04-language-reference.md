@@ -108,6 +108,26 @@ package 包名 {
 }
 ```
 
+### 注释
+
+WPL 支持 `//` 单行注释，解析前由 `CommentParser` 预处理剥离，可写在 `package`/`rule` 之间、规则体内等任意位置：
+
+```wpl
+// 顶层注释
+package demo {
+  rule hello {
+    // 字段内注释
+    (chars:name, digit:age)
+  }
+}
+```
+
+注意事项：
+- 注释在解析前由 `CommentParser` 预处理剥离，不影响匹配行为
+- 示例规则中常用 `//` 标注字段含义或输入样例
+
+> 提示：如需确认是否支持其他注释形式（如块注释），以对应 `wp-primitives` 版本的 `CommentParser` 实现为准。
+
 ### 字段定义完整语法
 
 ```
