@@ -498,6 +498,21 @@ mod tests {
     }
 
     #[test]
+    fn test_json_time_timestamp_zero() -> WplCodeResult<()> {
+        // issue #347：time_timestamp 应把数字 0 解析为 Unix epoch
+        let rule = r#"rule test { (json(time_timestamp@access_time)) }"#;
+        let data = r#"{ "access_time": 0 }"#;
+        let pipe = WplEvaluator::from_code(rule)?;
+        let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
+        if let Some(i) = tdc.field("access_time") {
+            assert_eq!(RAW_FMT.format_field(i), "1970-01-01 00:00:00".to_string());
+        } else {
+            panic!("json parse error");
+        }
+        Ok(())
+    }
+
+    #[test]
     fn test_json_logs_unescape_rule() -> WplCodeResult<()> {
         let rule = r#"rule nginx { (json( chars@logs | json_unescape() )) }"#;
         let data = r#"{"age": 10, "logs": "[10]:\"sys\""}"#;
