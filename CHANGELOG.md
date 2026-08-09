@@ -1,5 +1,15 @@
 # Changelog
-## [0.4.3 Unreleased]
+## [0.5.0 Unreleased]
+
+### Changed
+- **Dependencies**: Upgrade `wp-model-core` 0.8 → 0.9, `wp-data-fmt` 0.2 → 0.9, `wp-parse-api` 0.10 → 0.11, `wp-source-types` 0.1 → 0.2, `wp-error` 0.10 → 0.11, `wp-specs` 0.10 → 0.11.
+- **WPL docs**: Align the `04-language-reference` type table with `tree-sitter-wpl`: rename `time/clf` → `time_clf`, remove the non-existent `obj` type, add `kv` and `bad_json` types, and renumber the type table; fix the matching `time/clf` examples in the English reference.
+- **Grammar reference annotations**: Document the `copy_event_parse` and `no_match` annotations in the `04`/`06` grammar references.
+
+### Added
+- **Comments docs**: Document `//` single-line comments in the WPL language reference: comments are stripped by `CommentParser` preprocessing before parsing and are harmless to rule matching.
+
+## [0.4.3] - 2026-07-31
 
 ### Changed
 - **`copy_event_parse` now emits an independent record instead of merging**: `CopyEventParseAnnotation::proc` no longer `merge`s the target rule's parsed record into the current record. It returns the target's parse as a side record `(rule_name, DataRecord)`, which the engine routes independently under the target's wpl_key (e.g. `/fun/raw_event`) to its own sink. This lets a `copy_event_parse` target produce a separate output stream rather than augmenting the referencing rule's record.
