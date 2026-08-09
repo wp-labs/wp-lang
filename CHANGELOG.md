@@ -1,6 +1,14 @@
 # Changelog
 ## [0.5.1 Unreleased]
 
+### Fixed
+- **`time_timestamp` parses `0` as Unix epoch**: fix `time_timestamp` field type rejecting the digit `0` (the parser required fixed 10/13/16-digit lengths). `0` now parses as Unix epoch (`1970-01-01 00:00:00 UTC`); 1–9 digit integers parse as seconds; 10/13/16-digit second/millisecond/microsecond behavior is unchanged; 11–12 digit values now fail cleanly instead of partially consuming.
+
+### Changed
+- **WPL docs**: Clarify that `//` is the only single-line comment syntax (`#` conflicts with `#[...]` attribute syntax).
+
+## [0.5.0] - 2026-08-04
+
 ### Changed
 - **Dependencies**: Upgrade `wp-model-core` 0.8 → 0.9, `wp-data-fmt` 0.2 → 0.9, `wp-parse-api` 0.10 → 0.11, `wp-source-types` 0.1 → 0.2, `wp-error` 0.10 → 0.11, `wp-specs` 0.10 → 0.11.
 - **WPL docs**: Align the `04-language-reference` type table with `tree-sitter-wpl`: rename `time/clf` → `time_clf`, remove the non-existent `obj` type, add `kv` and `bad_json` types, and renumber the type table; fix the matching `time/clf` examples in the English reference.
@@ -15,14 +23,16 @@
 - **`copy_event_parse` now emits an independent record instead of merging**: `CopyEventParseAnnotation::proc` no longer `merge`s the target rule's parsed record into the current record. It returns the target's parse as a side record `(rule_name, DataRecord)`, which the engine routes independently under the target's wpl_key (e.g. `/fun/raw_event`) to its own sink. This lets a `copy_event_parse` target produce a separate output stream rather than augmenting the referencing rule's record.
 - **`AnnotationFunc::proc` signature**: Return type changed from `Result<(), WparseError>` to `Result<SideRecords, WparseError>` where `SideRecords = Vec<(SmolStr, DataRecord)>`. Annotations can now emit independently-routed side records in addition to mutating the current record. `Tag`/`Copy`/`Noop` return an empty `Vec`; `CopyEventParse` returns its target record. `SideRecords` is re-exported from the crate root.
 
-### Fixed
-- **`time_timestamp` parses `0` as Unix epoch**: fix `time_timestamp` field type rejecting the digit `0` (the parser required fixed 10/13/16-digit lengths). `0` now parses as Unix epoch (`1970-01-01 00:00:00 UTC`); 1–9 digit integers parse as seconds; 10/13/16-digit second/millisecond/microsecond behavior is unchanged; 11–12 digit values now fail cleanly instead of partially consuming.
-
-## [0.4.1] - 2026-07-31
+## [0.4.2] - 2026-07-31
 
 ### Added
 - **`copy_event_parse` annotation**: Add a cross-rule annotation `#[copy_event_parse(rule:"<rule_name>")]` that copies the raw payload to a same-package rule's parser and merges the produced fields into the current record. The target rule is parsed only; its own annotations are not executed. `CopyEventParseAnnotation` holds an `Option<WplEvaluator>` target injected at build time by the motor layer via `rule_name`, and at runtime uses `WplEvaluator::proc_ref` to avoid cloning the payload per event. Touches `AnnEnum`/`AnnFun` variants, the `wpl_anno` parser, the `ann_func` impl, and `AnnotationType::convert` assembly.
 - **`no_match` annotation**: Add a rule-level flag annotation `#[no_match]` that explicitly declares a rule does not participate in `parse_event` auto-matching. Such rules are skipped when assembling the auto-match pipeline set (their parser is still built for `copy_event_parse` target resolution), preventing designated parse rules from directly matching events and shadowing the referencing rule. Added `AnnEnum::NoMatch` / `AnnFun.no_match` (merge takes the union), a bare `no_match` parser branch, and `DebugFormat` rendering. The flag is metadata consumed by the motor assembly layer, not an executable `AnnotationFunc`.
+
+## [0.4.1] - 2026-07-31
+
+### Added
+- **`copy_event_parse` annotation**: Add the cross-rule annotation `#[copy_event_parse(rule:"<rule_name>")]` that copies the raw payload to a same-package rule's parser and merges the produced fields into the current record. Completed with `#[no_match]` in 0.4.2.
 
 ## [0.4.0] - 2026-07-08
 
