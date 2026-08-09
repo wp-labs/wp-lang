@@ -1,5 +1,5 @@
 # Changelog
-## [0.5.0 Unreleased]
+## [0.5.1 Unreleased]
 
 ### Changed
 - **Dependencies**: Upgrade `wp-model-core` 0.8 → 0.9, `wp-data-fmt` 0.2 → 0.9, `wp-parse-api` 0.10 → 0.11, `wp-source-types` 0.1 → 0.2, `wp-error` 0.10 → 0.11, `wp-specs` 0.10 → 0.11.
