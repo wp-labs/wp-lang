@@ -40,8 +40,10 @@
 | 10 | ISO 8601 | `time_iso` | `2023-05-15T07:09:12Z` | ISO 8601 标准 |
 | 11 | RFC 3339 | `time_3339` | `2022-03-21T12:34:56+00:00` | RFC3339 标准 |
 | 12 | RFC 2822 | `time_2822` | `Mon, 07 Jul 2025 09:20:32 +0000` | 邮件时间格式 |
-| 13 | CLF 时间 | `time_clf` | `06/Aug/2019:12:12:19 +0800` | Apache/Nginx 日志 |
+| 13 | CLF 时间 | `time/clf` | `06/Aug/2019:12:12:19 +0800` | Apache/Nginx 日志 |
 | 14 | Unix时间戳 | `time_timestamp` | `1647849600` | Unix 秒级时间戳 |
+
+> ⚠️ 时间子类型的命名：`time_iso` / `time_3339` / `time_2822` / `time_timestamp` 用**下划线**，唯独 CLF 用**斜杠** `time/clf`（`time_clf` 无效）。
 
 ### 网络类型
 
