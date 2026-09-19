@@ -1,4 +1,5 @@
 use crate::DataTypeParser;
+use crate::parser::wpl_field::wpl_meta_from_name;
 use smol_str::SmolStr;
 use std::fmt::Display;
 use winnow::ascii::multispace0;
@@ -27,7 +28,7 @@ pub fn take_datatype_impl(data: &mut &str) -> WResult<DataType> {
     let _ = multispace0.parse_next(data)?;
     let cp = data.checkpoint();
     let meta_str = take_meta_name.parse_next(data)?;
-    if let Ok(meta) = DataType::from(meta_str) {
+    if let Ok(meta) = wpl_meta_from_name(meta_str) {
         Ok(meta)
     } else {
         data.reset(&cp);

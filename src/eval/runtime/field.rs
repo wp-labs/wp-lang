@@ -11,6 +11,7 @@ use crate::generator::FieldGenConf;
 use crate::generator::{FmtField, GenChannel};
 use crate::parser::error::WplCodeResult;
 use crate::parser::wpl_field::KVARR_RAW_META_NAME;
+use crate::parser::wpl_field::wpl_meta_from_name;
 use derive_getters::Getters;
 use wp_model_core::model::FNameStr;
 // Use centralized parser result alias for consistency across crates
@@ -52,7 +53,7 @@ impl FieldEvalUnit {
         group_enum: WplGroupType,
     ) -> WplCodeResult<Self> {
         let next = if let DataType::Array(next_name) = meta.clone() {
-            let next_meta = DataType::from(next_name.as_str()).unwrap_or(DataType::Auto);
+            let next_meta = wpl_meta_from_name(next_name.as_str()).unwrap_or(DataType::Auto);
             Some(Box::new(Self::create_next(
                 index,
                 next_meta,

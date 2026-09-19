@@ -19,6 +19,7 @@ use crate::eval::value::parser::protocol::keyval::KeyValP;
 use crate::eval::value::parser::protocol::kvarr::KvArrP;
 use crate::eval::value::parser::protocol::proto_text::ProtoTextP;
 use crate::parser::error::{WplCodeError, WplCodeReason, WplCodeResult};
+use crate::parser::wpl_field::wpl_meta_from_name;
 use wp_model_core::model::DataType;
 
 use super::auto::CombinedParser;
@@ -33,7 +34,7 @@ impl ParserFactory {
         parse.ps.push(ParserFactory::create(&DataType::IP)?);
         parse.ps.push(ParserFactory::create(&DataType::KV)?);
         parse.ps.push(ParserFactory::create(&DataType::Float)?);
-        parse.ps.push(ParserFactory::create(&DataType::Digit)?);
+        parse.ps.push(ParserFactory::create(&DataType::Int)?);
         parse.ps.push(ParserFactory::create(&DataType::Hex)?);
         parse.ps.push(ParserFactory::create(&DataType::Chars)?);
         Ok(Hold::new(parse))
@@ -45,7 +46,7 @@ impl ParserFactory {
             DataType::Chars => Some(Hold::new(CharsP::default())),
             DataType::Symbol => Some(Hold::new(SymbolP::default())),
             DataType::PeekSymbol => Some(Hold::new(PeekSymbolP::default())),
-            DataType::Digit => Some(Hold::new(DigitP::default())),
+            DataType::Int => Some(Hold::new(DigitP::default())),
             DataType::Float => Some(Hold::new(FloatP::default())),
             DataType::Ignore => Some(Hold::new(IgnoreP::default())),
             DataType::Time => Some(Hold::new(TimeP::default())),
@@ -91,7 +92,7 @@ impl ParserFactory {
         let mut ctx = OperationContext::doing("create parser");
         ctx.record("meta", meta.to_string());
         if let DataType::Array(next_name) = meta {
-            let sub_meta = DataType::from(next_name.as_str())
+            let sub_meta = wpl_meta_from_name(next_name.as_str())
                 .map_err(|e| {
                     WplCodeReason::UnSupport
                         .to_err()
@@ -101,7 +102,7 @@ impl ParserFactory {
                 .with_context(&ctx)?;
 
             /*
-            let sub_meta = DataType::from(next_name.as_str()).map_err(|e| {
+            let sub_meta = wpl_meta_from_name(next_name.as_str()).map_err(|e| {
                 StructError::builder(WplCodeReason::UnSupport)
                     .detail(format!("unsupported data type: {}: {}", next_name, e))
                     .finish()

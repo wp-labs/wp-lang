@@ -150,10 +150,10 @@ mod tests {
             ip.parse_peek("2001:db8::1:80"),
             Ok(("", "2001:db8::1:80".parse().assert()))
         );
-        assert_eq!(
-            ip.parse_peek("2001:db8::1.80"),
-            Ok((".80", "2001:db8::1".parse().assert()))
-        );
+        // wp-primitives 0.2.1 起 IPv6 分支允许 `.`（用于 IPv4-mapped IPv6，如
+        // `::ffff:192.168.1.10`），`2001:db8::1.80` 会被整体吞掉并按非法 IP 拒绝，
+        // 不再回退为 `2001:db8::1` + 剩余 `.80`（`.` 不再是 IPv6 的截断边界）。
+        assert!(ip.parse_peek("2001:db8::1.80").is_err());
 
         let mut data = "172.0.0.1:80";
         let conf_ip = WplField::try_parse("ip\\:").assert();
@@ -170,7 +170,7 @@ mod tests {
         let field = ParserTUnit::new(DigitP::default(), conf_port.clone())
             .verify_parse_suc(&mut data)
             .assert();
-        assert_eq!(field[0], DataField::from_digit("digit", 80));
+        assert_eq!(field[0], DataField::from_int("digit", 80));
         assert_eq!(data, "");
 
         let mut data = "[172.0.0.1] [80]";
@@ -188,7 +188,7 @@ mod tests {
         let field = ParserTUnit::new(DigitP::default(), conf_port.clone())
             .verify_parse_suc(&mut data)
             .assert();
-        assert_eq!(field[0], DataField::from_digit("digit", 80));
+        assert_eq!(field[0], DataField::from_int("digit", 80));
         assert_eq!(data, "");
 
         let mut data = "192.168.1.2 - -";

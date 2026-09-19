@@ -1,4 +1,4 @@
-use wp_model_core::model::DataType;
+use crate::parser::wpl_field::wpl_meta_from_name;
 
 use crate::ParserFactory;
 use crate::ast::{WplRule, WplSep, WplStatementType};
@@ -55,7 +55,7 @@ pub fn compile_rule(
                     let f_conf_cloned = f_conf.clone();
                     let sep_cloned = sep.clone();
                     let field_fn: FieldGenFn = Box::new(move |ch: &mut GenChannel| {
-                        let meta = DataType::from(f_conf_cloned.meta_name.as_str())
+                        let meta = wpl_meta_from_name(f_conf_cloned.meta_name.as_str())
                             .map_err(|e| e.into_wpl_err())?;
                         let parser = ParserFactory::create(&meta)?;
                         let f = parser.generate(ch, &sep_cloned, &f_conf_cloned, gconf.as_ref())?;

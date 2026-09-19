@@ -205,7 +205,7 @@ impl FieldPipe for TargetDigitHas {
     #[inline]
     fn process(&self, field: Option<&mut DataField>) -> WResult<()> {
         if let Some(item) = field
-            && let Value::Digit(value) = item.get_value()
+            && let Value::Int(value) = item.get_value()
             && *value == self.value
         {
             return Ok(());
@@ -223,7 +223,7 @@ impl FieldPipe for DigitHas {
     #[inline]
     fn process(&self, field: Option<&mut DataField>) -> WResult<()> {
         if let Some(item) = field
-            && let Value::Digit(value) = item.get_value()
+            && let Value::Int(value) = item.get_value()
             && *value == self.value
         {
             return Ok(());
@@ -237,7 +237,7 @@ impl FieldPipe for TargetDigitIn {
     #[inline]
     fn process(&self, field: Option<&mut DataField>) -> WResult<()> {
         if let Some(item) = field
-            && let Value::Digit(value) = item.get_value()
+            && let Value::Int(value) = item.get_value()
             && self.value.contains(value)
         {
             return Ok(());
@@ -255,7 +255,7 @@ impl FieldPipe for DigitIn {
     #[inline]
     fn process(&self, field: Option<&mut DataField>) -> WResult<()> {
         if let Some(item) = field
-            && let Value::Digit(value) = item.get_value()
+            && let Value::Int(value) = item.get_value()
             && self.value.contains(value)
         {
             return Ok(());
@@ -269,7 +269,7 @@ impl FieldPipe for DigitRange {
     #[inline]
     fn process(&self, field: Option<&mut DataField>) -> WResult<()> {
         if let Some(item) = field
-            && let Value::Digit(value) = item.get_value()
+            && let Value::Int(value) = item.get_value()
             && *value >= self.begin
             && *value <= self.end
         {
@@ -656,7 +656,7 @@ mod tests {
 
     #[test]
     fn chars_replace_returns_err_on_non_chars_field() {
-        let mut fields = vec![DataField::from_digit("num".to_string(), 123)];
+        let mut fields = vec![DataField::from_int("num".to_string(), 123)];
         assert!(
             ReplaceFunc {
                 target: "old".into(),
@@ -669,7 +669,7 @@ mod tests {
 
     #[test]
     fn digit_range_successfully_matches_value_in_range() {
-        let mut fields = vec![DataField::from_digit("num".to_string(), 5)];
+        let mut fields = vec![DataField::from_int("num".to_string(), 5)];
         DigitRange { begin: 1, end: 10 }
             .process(fields.get_mut(0))
             .expect("value 5 should be in range [1,10]");
@@ -678,7 +678,7 @@ mod tests {
     #[test]
     fn digit_range_matches_boundary_values() {
         // 测试下界
-        let mut fields = vec![DataField::from_digit("num".to_string(), 100)];
+        let mut fields = vec![DataField::from_int("num".to_string(), 100)];
         DigitRange {
             begin: 100,
             end: 200,
@@ -687,7 +687,7 @@ mod tests {
         .expect("value 100 should match lower boundary");
 
         // 测试上界
-        let mut fields = vec![DataField::from_digit("num".to_string(), 200)];
+        let mut fields = vec![DataField::from_int("num".to_string(), 200)];
         DigitRange {
             begin: 100,
             end: 200,
@@ -698,7 +698,7 @@ mod tests {
 
     #[test]
     fn digit_range_returns_err_when_value_out_of_range() {
-        let mut fields = vec![DataField::from_digit("num".to_string(), 50)];
+        let mut fields = vec![DataField::from_int("num".to_string(), 50)];
         assert!(
             DigitRange { begin: 1, end: 10 }
                 .process(fields.get_mut(0))
@@ -783,7 +783,7 @@ mod tests {
 
     #[test]
     fn regex_match_returns_err_on_non_chars_field() {
-        let mut fields = vec![DataField::from_digit("num".to_string(), 123)];
+        let mut fields = vec![DataField::from_int("num".to_string(), 123)];
         assert!(
             RegexMatch {
                 pattern: r"\d+".into(),
@@ -942,7 +942,7 @@ mod tests {
         use wp_model_core::model::DataType;
 
         // 测试非字符串类型的字段
-        let mut fields = vec![DataField::from_digit("count".to_string(), 42)];
+        let mut fields = vec![DataField::from_int("count".to_string(), 42)];
 
         StartsWith {
             prefix: "test".into(),
@@ -1074,7 +1074,7 @@ mod tests {
     fn chars_not_has_with_digit_field() {
         // Bug fix test: When field is Digit type (not Chars),
         // chars_not_has should return TRUE (field is not the target string)
-        let mut fields = vec![DataField::from_digit("count".to_string(), 42)];
+        let mut fields = vec![DataField::from_int("count".to_string(), 42)];
 
         let not_has = CharsNotHas {
             value: "NDS".into(),
@@ -1088,7 +1088,7 @@ mod tests {
     fn target_chars_not_has_with_digit_field() {
         // Bug fix test: When field is Digit type (not Chars),
         // f_chars_not_has should return TRUE
-        let mut fields = vec![DataField::from_digit("dev_type".to_string(), 123)];
+        let mut fields = vec![DataField::from_int("dev_type".to_string(), 123)];
 
         let not_has = TargetCharsNotHas {
             target: Some("dev_type".into()),

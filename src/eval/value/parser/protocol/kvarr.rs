@@ -258,10 +258,10 @@ impl KvArrP {
                 if let (true, Some(f)) = (num.is_f64(), num.as_f64()) {
                     out.push(DataField::from_float(key, f));
                 } else if let Some(i) = num.as_i64() {
-                    out.push(DataField::from_digit(key, i));
+                    out.push(DataField::from_int(key, i));
                 } else if let Some(u) = num.as_u64() {
                     if u <= i64::MAX as u64 {
-                        out.push(DataField::from_digit(key, u as i64));
+                        out.push(DataField::from_int(key, u as i64));
                     } else {
                         out.push(DataField::from_chars(key, num.to_string()));
                     }
@@ -755,7 +755,7 @@ mod tests {
             record.field("sip").map(|s| s.as_field()),
             Some(&expected_sip)
         );
-        let expected_cnt = DataField::from_digit("cnt", 42);
+        let expected_cnt = DataField::from_int("cnt", 42);
         assert_eq!(
             record.field("cnt").map(|s| s.as_field()),
             Some(&expected_cnt)
@@ -781,7 +781,7 @@ mod tests {
             record.field("msg").map(|s| s.as_field()),
             Some(&expected_msg)
         );
-        let expected_cnt = DataField::from_digit("cnt", 42);
+        let expected_cnt = DataField::from_int("cnt", 42);
         assert_eq!(
             record.field("cnt").map(|s| s.as_field()),
             Some(&expected_cnt)
@@ -808,7 +808,7 @@ mod tests {
         assert_eq!(record.field("a").map(|s| s.as_field()), Some(&expected_a));
         let expected_b = DataField::from_chars("b", "bar x");
         assert_eq!(record.field("b").map(|s| s.as_field()), Some(&expected_b));
-        let expected_c = DataField::from_digit("c", 1);
+        let expected_c = DataField::from_int("c", 1);
         assert_eq!(record.field("c").map(|s| s.as_field()), Some(&expected_c));
         Ok(())
     }
@@ -844,7 +844,7 @@ mod tests {
             record.field("tag[1]").map(|s| s.as_field()),
             Some(&expected_tag1)
         );
-        let expected_count = DataField::from_digit("count", 3);
+        let expected_count = DataField::from_int("count", 3);
         assert_eq!(
             record.field("count").map(|s| s.as_field()),
             Some(&expected_count)
@@ -914,7 +914,7 @@ mod tests {
             record.field("note").map(|s| s.as_field()),
             Some(&expected_note)
         );
-        let expected_count = DataField::from_digit("count", 7);
+        let expected_count = DataField::from_int("count", 7);
         assert_eq!(
             record.field("count").map(|s| s.as_field()),
             Some(&expected_count)
@@ -935,7 +935,7 @@ mod tests {
             record.field("msg").map(|s| s.as_field()),
             Some(&expected_msg)
         );
-        let expected_ext = DataField::from_digit("externalId", 0);
+        let expected_ext = DataField::from_int("externalId", 0);
         assert_eq!(
             record.field("externalId").map(|s| s.as_field()),
             Some(&expected_ext)
@@ -1001,7 +1001,7 @@ mod tests {
         );
         assert_eq!(
             record.field("list<int>").map(|s| s.as_field()),
-            Some(&DataField::from_digit("list<int>", 100))
+            Some(&DataField::from_int("list<int>", 100))
         );
         assert_eq!(
             record.field("arr[0]").map(|s| s.as_field()),
@@ -1028,7 +1028,7 @@ mod tests {
         );
         assert_eq!(
             record.field("list<int>").map(|s| s.as_field()),
-            Some(&DataField::from_digit("list<int>", 100))
+            Some(&DataField::from_int("list<int>", 100))
         );
         assert_eq!(
             record.field("set{a}").map(|s| s.as_field()),
@@ -1049,7 +1049,7 @@ mod tests {
         );
         assert_eq!(
             record.field("list<int>").map(|s| s.as_field()),
-            Some(&DataField::from_digit("list<int>", 100))
+            Some(&DataField::from_int("list<int>", 100))
         );
         assert_eq!(
             record.field("set{a}").map(|s| s.as_field()),
@@ -1082,7 +1082,7 @@ mod tests {
         assert!(record.field("a").is_none());
         assert_eq!(
             record.field("b").map(|s| s.as_field()),
-            Some(&DataField::from_digit("b", 1))
+            Some(&DataField::from_int("b", 1))
         );
         Ok(())
     }
@@ -1098,7 +1098,7 @@ mod tests {
         assert!(record.field("a").is_none());
         assert_eq!(
             record.field("b").map(|s| s.as_field()),
-            Some(&DataField::from_digit("b", 1))
+            Some(&DataField::from_int("b", 1))
         );
         Ok(())
     }
@@ -1140,7 +1140,7 @@ mod tests {
         );
         assert_eq!(
             record.field("count").map(|s| s.as_field()),
-            Some(&DataField::from_digit("count", 42))
+            Some(&DataField::from_int("count", 42))
         );
         assert_eq!(
             record.field("ratio").map(|s| s.as_field()),

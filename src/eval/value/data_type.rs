@@ -38,12 +38,12 @@ where
         match meta {
             DataType::Chars => Ok(Field::<T>::from_chars(name.into(), value.into())),
             DataType::Symbol => Ok(Field::<T>::from_symbol(name.into(), value.into())),
-            DataType::Digit => {
+            DataType::Int => {
                 let value = value
                     .into()
                     .parse::<i64>()
                     .map_err(|e| ModelError::Parse(e.to_string()))?;
-                Ok(Field::<T>::from_digit(name.into(), value))
+                Ok(Field::<T>::from_int(name.into(), value))
             }
             DataType::Float => {
                 let value = value

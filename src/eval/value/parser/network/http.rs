@@ -138,7 +138,7 @@ impl PatternParser for StatusP {
             out.push(DataField::new_opt(
                 DataType::HttpStatus,
                 Some(name),
-                Value::Digit(status as i64),
+                Value::Int(status as i64),
             ));
 
             return Ok(());
@@ -152,7 +152,7 @@ impl PatternParser for StatusP {
         f_conf: &WplField,
         _g_conf: Option<&FieldGenConf>,
     ) -> WplCodeResult<DataField> {
-        Ok(DataField::from_digit(f_conf.safe_name(), 200))
+        Ok(DataField::from_int(f_conf.safe_name(), 200))
     }
 }
 

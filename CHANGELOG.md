@@ -1,5 +1,22 @@
 # Changelog
-## [0.5.1 Unreleased]
+## [0.6.0 Unreleased]
+
+### ⚠️ BREAKING CHANGES
+- **Dependency `wp-model-core` 0.9 → 0.10**: upstream renamed the integer type — `Value::Digit` → `Value::Int`, `DataType::Digit` → `DataType::Int` (serde tag `"digit"` → `"int"`), `Field::from_digit` → `from_int`, and type alias `DigitValue` → `IntValue`. Exhaustive `match` on `Value`/`DataType` must be renamed.
+
+### Changed
+- **WPL keeps the `digit` keyword**: wp-model-core 0.10 renamed the `DataType` tag `"digit"` → `"int"`, but the WPL language keyword stays `digit` (see `docs/*/04-language-reference` and `tree-sitter-wpl`). Added `parser::wpl_field::wpl_meta_from_name` (WPL aliases `digit`/`bad_json`/`kvarr_raw` → `DataType`) and routed every WPL meta-name resolution through it (`wpl_field` parse, `generate`/`precompile`, `literal`, `parser/factory`, `protocol/array`, `protocol/keyval`, `runtime/field`, `runtime/group/order`, `ast/fld_fmt`, `ast/field/types`), so `(digit:xxx)` rules keep parsing.
+
+### Dependencies
+- Upgrade `wp-model-core` 0.9 → 0.10, `wp-data-fmt` 0.9 → 0.10, `wp-parse-api` 0.11 → 0.12, `wp-source-types` 0.2 → 0.3, `wp-error` 0.11 → 0.12, `wp-specs` 0.11 → 0.12, `base64` 0.22 → 0.23, `mockall` 0.14 → 0.15.
+
+### Fixed
+- **`ip` partial parsing with dotted IPv6 suffix**: `wp-primitives` 0.2.1 now allows `.` in the IPv6 branch (to support IPv4-mapped IPv6 such as `::ffff:192.168.1.10`), so `2001:db8::1.80` is consumed whole and rejected as an invalid IP instead of falling back to `2001:db8::1` + `.80`. Updated `test_ip_partial` accordingly.
+
+### Docs
+- Add crate/coverage badges to `README.md` (CI, crates.io, downloads, docs.rs, license, codecov).
+
+## [0.5.1] - 2026-08-09
 
 ### Fixed
 - **`time_timestamp` parses `0` as Unix epoch**: fix `time_timestamp` field type rejecting the digit `0` (the parser required fixed 10/13/16-digit lengths). `0` now parses as Unix epoch (`1970-01-01 00:00:00 UTC`); 1–9 digit integers parse as seconds; 10/13/16-digit second/millisecond/microsecond behavior is unchanged; 11–12 digit values now fail cleanly instead of partially consuming.

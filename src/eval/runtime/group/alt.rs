@@ -90,7 +90,7 @@ mod tests {
         println!("{}", result);
         assert_eq!(
             result.get_field_owned("id"),
-            Some(DataField::from_digit("id", 2002))
+            Some(DataField::from_int("id", 2002))
         );
 
         let mut data = r#"bad - - [06/Aug/2019:12:12:19 +0800] "#;

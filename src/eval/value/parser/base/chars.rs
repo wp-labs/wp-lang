@@ -13,16 +13,16 @@ use rand::RngExt;
 use winnow::ascii::{digit1, multispace0};
 use winnow::combinator::preceded;
 use wp_model_core::model::{DataField, Value};
-use wp_model_core::model::{DataType, DigitValue};
+use wp_model_core::model::{DataType, IntValue};
 use wp_primitives::Parser;
 use wp_primitives::WResult as ModalResult;
 
 #[derive(Default)]
 pub struct CharsP {}
 
-impl ParserValue<DigitValue> for CharsP {
-    fn parse_value<'a>(data: &mut &str) -> ModalResult<DigitValue> {
-        preceded(multispace0, digit1.try_map(str::parse::<DigitValue>)).parse_next(data)
+impl ParserValue<IntValue> for CharsP {
+    fn parse_value<'a>(data: &mut &str) -> ModalResult<IntValue> {
+        preceded(multispace0, digit1.try_map(str::parse::<IntValue>)).parse_next(data)
     }
 }
 

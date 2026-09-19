@@ -6,7 +6,7 @@ use crate::parser::utils::{quot_r_str, quot_str, take_to_end, window_path};
 use wp_model_core::model::DataField;
 use wp_model_core::model::DataType;
 use wp_model_core::model::FNameStr;
-use wp_model_core::model::{DigitValue, Value};
+use wp_model_core::model::{IntValue, Value};
 
 use winnow::ascii::{dec_int, multispace0};
 use winnow::combinator::alt;
@@ -20,8 +20,8 @@ use crate::eval::value::parse_def::PatternParser;
 #[derive(Default)]
 pub struct BoolP {}
 
-impl ParserValue<DigitValue> for BoolP {
-    fn parse_value<'a>(data: &mut &str) -> ModalResult<DigitValue> {
+impl ParserValue<IntValue> for BoolP {
+    fn parse_value<'a>(data: &mut &str) -> ModalResult<IntValue> {
         preceded(multispace0, dec_int).parse_next(data)
     }
 }

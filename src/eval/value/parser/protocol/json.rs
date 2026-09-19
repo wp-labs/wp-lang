@@ -404,7 +404,7 @@ mod tests {
         let pipe = WplEvaluator::from_code(rule)?;
         let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("cpu") {
-            let expected = DataField::from_digit("cpu", 96);
+            let expected = DataField::from_int("cpu", 96);
             assert_eq!(i.as_field(), &expected);
         }
         Ok(())
@@ -418,7 +418,7 @@ mod tests {
         let pipe = WplEvaluator::from_code(rule)?;
         let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("cpu") {
-            let expected = DataField::from_digit("cpu", 96);
+            let expected = DataField::from_int("cpu", 96);
             assert_eq!(i.as_field(), &expected);
         }
         Ok(())
@@ -430,7 +430,7 @@ mod tests {
         let pipe = WplEvaluator::from_code(rule)?;
         let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("cpu") {
-            let expected = DataField::from_digit("cpu", 96);
+            let expected = DataField::from_int("cpu", 96);
             assert_eq!(i.as_field(), &expected);
         }
         Ok(())
@@ -444,7 +444,7 @@ mod tests {
         let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("key[0]") {
             println!("{}", i);
-            //assert_eq!(*i, TDOEnum::from_digit("cpu", 96));
+            //assert_eq!(*i, TDOEnum::from_int("cpu", 96));
         } else {
             panic!("json parse error");
         }
@@ -577,7 +577,7 @@ mod tests {
             .verify_parse_suc(&mut data)
             .assert();
         let tdc = DataRecord::from(obj);
-        let expected_i = DataField::from_digit("i", -42);
+        let expected_i = DataField::from_int("i", -42);
         assert_eq!(tdc.field("i").map(|s| s.as_field()), Some(&expected_i));
         if let Some(storage) = tdc.field("f") {
             let _field = storage.as_field();
@@ -813,7 +813,7 @@ mod tests {
         let mut expected = ObjectValue::default();
         expected.insert(
             SmolStr::from("relation"),
-            DataField::from_digit("relation".to_string(), 1),
+            DataField::from_int("relation".to_string(), 1),
         );
         expected.insert(
             SmolStr::from("alert_id"),
@@ -824,7 +824,7 @@ mod tests {
         );
         expected.insert(
             SmolStr::from("action_time"),
-            DataField::from_digit("action_time".to_string(), 1676304603062),
+            DataField::from_int("action_time".to_string(), 1676304603062),
         );
         expected.insert(
             SmolStr::from("rule_name"),
@@ -874,12 +874,12 @@ mod tests {
         let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
 
         let _expected = vec![
-            DataField::from_digit("event_detail/relation".to_string(), 1),
+            DataField::from_int("event_detail/relation".to_string(), 1),
             DataField::from_chars(
                 "event_detail/alert_id".to_string(),
                 r#"94882787-9505-49d4-9024-20DC93AF579B"#.to_string(),
             ),
-            DataField::from_digit(
+            DataField::from_int(
                 "event_detail/action_time".to_string(),
                 1676304603062,
             ),

@@ -3,6 +3,7 @@ use crate::ast::debug::DebugFormat;
 use crate::ast::fld_fmt::WplFieldFmt;
 use crate::ast::syntax::wpl_sep::WplSep;
 use crate::parser::wpl_field::wpl_field;
+use crate::parser::wpl_field::wpl_meta_from_name;
 use crate::types::WildMap;
 use derive_getters::Getters;
 use std::borrow::Cow;
@@ -131,7 +132,7 @@ impl WplField {
 
     pub fn new(meta: &str) -> Result<Self, MetaErr> {
         let ins = WplField {
-            meta_type: DataType::from(meta)?,
+            meta_type: wpl_meta_from_name(meta)?,
             meta_name: meta.into(),
             ..Default::default()
         };
@@ -141,7 +142,7 @@ impl WplField {
 
     pub fn sub_for_arr(meta: &str) -> Result<Self, MetaErr> {
         let ins = WplField {
-            meta_type: DataType::from(meta)?,
+            meta_type: wpl_meta_from_name(meta)?,
             meta_name: meta.into(),
             fmt_conf: WplFieldFmt::default(),
             take_sep: false,
@@ -169,7 +170,7 @@ impl WplField {
     fn validate(&self) {
         match &self.meta_type {
             DataType::Chars | DataType::Ignore => {}
-            DataType::Digit => {
+            DataType::Int => {
                 if self.fmt_conf.field_cnt.is_some() {
                     panic!("meta type {:?} can not have field_cnt", self.meta_type);
                 }

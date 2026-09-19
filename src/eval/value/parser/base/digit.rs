@@ -9,7 +9,7 @@ use winnow::combinator::preceded;
 use wp_model_core::model::DataField;
 use wp_model_core::model::DataType;
 use wp_model_core::model::FNameStr;
-use wp_model_core::model::{DigitValue, FloatValue};
+use wp_model_core::model::{FloatValue, IntValue};
 use wp_primitives::Parser;
 use wp_primitives::WResult as ModalResult;
 use wp_primitives::symbol::ctx_desc;
@@ -21,8 +21,8 @@ pub struct DigitP {}
 #[derive(Default)]
 pub struct FloatP {}
 
-impl ParserValue<DigitValue> for DigitP {
-    fn parse_value<'a>(data: &mut &str) -> ModalResult<DigitValue> {
+impl ParserValue<IntValue> for DigitP {
+    fn parse_value<'a>(data: &mut &str) -> ModalResult<IntValue> {
         preceded(multispace0, dec_int).parse_next(data)
     }
 }
@@ -42,13 +42,13 @@ impl PatternParser for DigitP {
                 let obj = Self::parse_value
                     .context(ctx_desc("<digit>"))
                     .parse_next(data)?;
-                out.push(DataField::new_opt(DataType::Digit, Some(name), obj.into()));
+                out.push(DataField::new_opt(DataType::Int, Some(name), obj.into()));
             }
             _ => {
                 let obj = Self::parse_value
                     .context(ctx_desc("<digit>"))
                     .parse_next(data)?;
-                out.push(DataField::new_opt(DataType::Digit, Some(name), obj.into()));
+                out.push(DataField::new_opt(DataType::Int, Some(name), obj.into()));
             }
         }
         Ok(())
@@ -68,7 +68,7 @@ impl PatternParser for DigitP {
             0..2000
         };
         let dat = gnc.rng.random_range(range);
-        Ok(DataField::from_digit(f_conf.safe_name(), dat))
+        Ok(DataField::from_int(f_conf.safe_name(), dat))
     }
 }
 
@@ -133,14 +133,14 @@ mod tests {
         let field = ParserTUnit::new(DigitP::default(), conf)
             .verify_parse_suc_end(&mut data)
             .assert();
-        assert_eq!(field[0], DataField::from_digit("digit", -99));
+        assert_eq!(field[0], DataField::from_int("digit", -99));
 
         let mut data = r#"{"num":-99}"#;
         let conf = WplField::try_parse("json(digit@num)").assert();
         let field = ParserTUnit::new(JsonP::default(), conf)
             .verify_parse_suc(&mut data)
             .assert();
-        assert_eq!(field[0], DataField::from_digit("num", -99));
+        assert_eq!(field[0], DataField::from_int("num", -99));
 
         let mut data = "[3.14]";
         let conf = WplField::try_parse("float<[,]>").assert();
@@ -161,7 +161,7 @@ mod tests {
             .verify_parse_suc(&mut data)
             .assert();
         match field[0].get_value() {
-            Value::Digit(digit) => {
+            Value::Int(digit) => {
                 assert_eq!(*digit, 188);
             }
             _ => panic!("not digit"),
@@ -210,9 +210,9 @@ mod tests {
         let (tdc, _) = lpp.proc(0, raw, 0).map_err(|e| e.into_wpl_err())?;
         let tdc_assert = DataRecord::from(vec![
             DataField {
-                meta: DataType::Digit,
+                meta: DataType::Int,
                 name: "digit".into(),
-                value: Value::Digit(1.into()),
+                value: Value::Int(1.into()),
             },
             DataField {
                 meta: DataType::Chars,
@@ -220,9 +220,9 @@ mod tests {
                 value: Value::Chars("".into()),
             },
             DataField {
-                meta: DataType::Digit,
+                meta: DataType::Int,
                 name: "digit".into(),
-                value: Value::Digit(3.into()),
+                value: Value::Int(3.into()),
             },
         ]);
         assert_eq!(tdc, tdc_assert);
@@ -238,19 +238,19 @@ mod tests {
         let (tdc, _) = lpp.proc(0, raw, 0).map_err(|e| e.into_wpl_err())?;
         let tdc_assert = DataRecord::from(vec![
             DataField {
-                meta: DataType::Digit,
+                meta: DataType::Int,
                 name: "digit".into(),
-                value: Value::Digit(1.into()),
+                value: Value::Int(1.into()),
             },
             DataField {
-                meta: DataType::Digit,
+                meta: DataType::Int,
                 name: "digit".into(),
-                value: Value::Digit(2.into()),
+                value: Value::Int(2.into()),
             },
             DataField {
-                meta: DataType::Digit,
+                meta: DataType::Int,
                 name: "digit".into(),
-                value: Value::Digit(3.into()),
+                value: Value::Int(3.into()),
             },
         ]);
         assert_eq!(tdc, tdc_assert);

@@ -76,11 +76,12 @@ impl Display for WplFieldFmt {
 #[cfg(test)]
 pub mod for_test {
     use super::*;
-    use wp_model_core::model::{DataType, MetaErr};
+    use crate::parser::wpl_field::wpl_meta_from_name;
+    use wp_model_core::model::MetaErr;
 
     pub fn fdc2(meta: &str, sep: &str) -> Result<WplField, MetaErr> {
         let mut conf = WplField {
-            meta_type: DataType::from(meta)?,
+            meta_type: wpl_meta_from_name(meta)?,
             meta_name: meta.into(),
             name: Some(meta.into()),
             fmt_conf: WplFieldFmt {
@@ -95,7 +96,7 @@ pub mod for_test {
 
     pub fn fdc3_1(meta: &str, content: &str, sep: &str) -> Result<WplField, MetaErr> {
         let mut conf = WplField {
-            meta_type: DataType::from(meta)?,
+            meta_type: wpl_meta_from_name(meta)?,
             meta_name: meta.into(),
             name: Some(meta.into()),
             content: Some(content.to_string()),
@@ -111,7 +112,7 @@ pub mod for_test {
 
     pub fn fdc2_1(meta: &str, fmt: WplFieldFmt) -> Result<WplField, MetaErr> {
         let mut conf = WplField {
-            meta_type: DataType::from(meta)?,
+            meta_type: wpl_meta_from_name(meta)?,
             meta_name: meta.into(),
             fmt_conf: fmt,
             ..Default::default()
@@ -122,7 +123,7 @@ pub mod for_test {
 
     pub fn fdc3(meta: &str, sep: &str, continuous: bool) -> Result<WplField, MetaErr> {
         let mut conf = WplField {
-            meta_type: DataType::from(meta)?,
+            meta_type: wpl_meta_from_name(meta)?,
             meta_name: meta.into(),
             //name: Some(meta.to_string()),
             fmt_conf: WplFieldFmt {
@@ -143,7 +144,7 @@ pub mod for_test {
         cnt: usize,
     ) -> Result<WplField, MetaErr> {
         let mut conf = WplField {
-            meta_type: DataType::from(meta)?,
+            meta_type: wpl_meta_from_name(meta)?,
             meta_name: meta.into(),
             fmt_conf: WplFieldFmt {
                 ..Default::default()

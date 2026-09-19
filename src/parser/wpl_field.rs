@@ -15,7 +15,7 @@ use winnow::error::{StrContext, StrContextValue};
 use winnow::stream::Stream;
 use winnow::token::{literal, take, take_till, take_while};
 // Use workspace-wide parser result alias to decouple from winnow's concrete type
-use wp_model_core::model::DataType;
+use wp_model_core::model::{DataType, MetaErr};
 use wp_primitives::Parser;
 use wp_primitives::WResult as ModalResult;
 use wp_primitives::symbol::{ctx_desc, ctx_literal};
@@ -23,6 +23,10 @@ use wp_primitives::utils::{RestAble, get_scope};
 
 const BAD_JSON_META_NAME: &str = "bad_json";
 pub const KVARR_RAW_META_NAME: &str = "kvarr_raw";
+/// WPL 的整数类型关键字。wp-model-core 0.10 把 `DataType::Digit` 改名为
+/// `DataType::Int`（标签 "digit" → "int"），但 WPL 语言关键字保持 `digit`
+/// （见 `docs/*/04-language-reference` 与 `tree-sitter-wpl`），故在此显式保留别名。
+pub const DIGIT_META_NAME: &str = "digit";
 
 // Removed unused generic helper that depended on winnow's two-parameter ModalResult.
 // If needed later, prefer concrete `&str` + `ModalResult` signatures via wp_primitives::WResult.
@@ -31,11 +35,31 @@ fn take_meta_token<'a>(input: &mut &'a str) -> ModalResult<&'a str> {
     take_while(1.., |c: char| c.is_alphanumeric() || c == '_' || c == '/').parse_next(input)
 }
 
-fn resolve_meta(token: &str) -> Option<(DataType, String)> {
+/// WPL 关键字 → `DataType` 的别名表。这些关键字不直接对应 wp-model-core 的规范类型名。
+fn resolve_meta_alias(token: &str) -> Option<DataType> {
     if token == BAD_JSON_META_NAME {
-        Some((DataType::Chars, token.to_string()))
+        Some(DataType::Chars)
     } else if token == KVARR_RAW_META_NAME {
-        Some((DataType::KvArr, token.to_string()))
+        Some(DataType::KvArr)
+    } else if token == DIGIT_META_NAME {
+        Some(DataType::Int)
+    } else {
+        None
+    }
+}
+
+/// 解析 WPL 类型名：先查 WPL 别名（`digit`/`bad_json`/`kvarr_raw`），
+/// 再回落到 wp-model-core 的规范名解析。
+pub fn wpl_meta_from_name(name: &str) -> Result<DataType, MetaErr> {
+    match resolve_meta_alias(name) {
+        Some(meta) => Ok(meta),
+        None => DataType::from(name),
+    }
+}
+
+fn resolve_meta(token: &str) -> Option<(DataType, String)> {
+    if let Some(meta) = resolve_meta_alias(token) {
+        Some((meta, token.to_string()))
     } else {
         DataType::from(token)
             .ok()

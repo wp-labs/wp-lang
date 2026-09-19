@@ -131,8 +131,10 @@ mod tests {
         assert!(parse_timestamp.parse_next(&mut data).is_err());
         // us/ms 也匹配不上（11 位），整体应失败
         let mut all = "12345678901";
-        assert!(alt((parse_timestamp_us, parse_timestamp_ms, parse_timestamp))
-            .parse_next(&mut all)
-            .is_err());
+        assert!(
+            alt((parse_timestamp_us, parse_timestamp_ms, parse_timestamp))
+                .parse_next(&mut all)
+                .is_err()
+        );
     }
 }

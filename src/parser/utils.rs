@@ -156,7 +156,7 @@ pub fn take_sql_tval(input: &mut &str) -> WResult<Value> {
     }
     if let Some(value) = opt(take_while(0.., ('0'..='9', '.', '-', '+'))).parse_next(input)? {
         if let Ok(digit) = value.parse::<i64>() {
-            return Ok(Value::Digit(digit));
+            return Ok(Value::Int(digit));
         } else {
             return Ok(Value::Float(value.parse::<f64>().unwrap_or(0.0)));
         }
@@ -571,7 +571,7 @@ mod tests {
             Value::Chars("key".into()),
             take_sql_tval.parse_next(&mut "'key'")?
         );
-        assert_eq!(Value::Digit(100), take_sql_tval.parse_next(&mut "100")?);
+        assert_eq!(Value::Int(100), take_sql_tval.parse_next(&mut "100")?);
         assert_eq!(
             Value::Float(100.01),
             take_sql_tval.parse_next(&mut "100.01")?

@@ -150,7 +150,7 @@ mod tests {
     use crate::parser::error::IntoWplCodeError;
     use crate::parser::error::WplCodeResult;
     use crate::parser::parse_code::wpl_express;
-    use wp_model_core::model::DataType;
+    use crate::parser::wpl_field::wpl_meta_from_name;
     use wp_model_core::model::Value;
 
     #[test]
@@ -220,7 +220,7 @@ mod tests {
             for f_conf in &group.fields {
                 let mut ch = GenChannel::new();
                 let meta =
-                    DataType::from(f_conf.meta_name.as_str()).map_err(|e| e.into_wpl_err())?;
+                    wpl_meta_from_name(f_conf.meta_name.as_str()).map_err(|e| e.into_wpl_err())?;
                 let parser = ParserFactory::create(&meta)?;
                 let field = parser.generate(&mut ch, &sep, f_conf, None)?;
                 fieldset.push(field);

@@ -5,10 +5,11 @@ use wp_model_core::model::FNameStr;
 
 use crate::parser::error::IntoWplCodeError;
 use crate::parser::utils::quot_str;
+use crate::parser::wpl_field::wpl_meta_from_name;
 
 use winnow::ascii::{digit1, multispace0};
 use winnow::combinator::{fail, preceded, separated};
-use wp_model_core::model::DigitValue;
+use wp_model_core::model::IntValue;
 use wp_primitives::symbol::{ctx_desc, symbol_brackets_beg, symbol_brackets_end};
 
 #[derive(Default)]
@@ -57,9 +58,9 @@ impl ArrayP {
     }
 }
 
-impl ParserValue<DigitValue> for ArrayP {
-    fn parse_value<'a>(data: &mut &str) -> ModalResult<DigitValue> {
-        preceded(multispace0, digit1.try_map(str::parse::<DigitValue>)).parse_next(data)
+impl ParserValue<IntValue> for ArrayP {
+    fn parse_value<'a>(data: &mut &str) -> ModalResult<IntValue> {
+        preceded(multispace0, digit1.try_map(str::parse::<IntValue>)).parse_next(data)
     }
 }
 
@@ -116,7 +117,7 @@ impl PatternParser for ArrayP {
         let name = _f_conf.safe_name();
         // 推断子类型：array/<sub>，未指定则默认为 chars
         let elem_meta = match &_f_conf.meta_type {
-            DataType::Array(sub) => DataType::from(sub).unwrap_or(DataType::Chars),
+            DataType::Array(sub) => wpl_meta_from_name(sub).unwrap_or(DataType::Chars),
             _ => DataType::Chars,
         };
 
@@ -173,9 +174,9 @@ mod tests {
         let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         println!("{}", tdc);
         let expected = vec![
-            DataField::new_opt(DataType::Digit, Some("array_val/[0]".into()), 1.into()),
-            DataField::new_opt(DataType::Digit, Some("array_val/[1]".into()), 2.into()),
-            DataField::new_opt(DataType::Digit, Some("array_val/[2]".into()), 3.into()),
+            DataField::new_opt(DataType::Int, Some("array_val/[0]".into()), 1.into()),
+            DataField::new_opt(DataType::Int, Some("array_val/[1]".into()), 2.into()),
+            DataField::new_opt(DataType::Int, Some("array_val/[2]".into()), 3.into()),
         ];
         let expected = DataField::from_arr("array_val".to_string(), expected);
         assert_eq!(tdc.get_field_owned("array_val"), Some(expected));
@@ -203,9 +204,9 @@ mod tests {
         let pipe = WplEvaluator::from_code(rule)?;
         let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         let expected = vec![
-            DataField::new_opt(DataType::Digit, Some("nums/[0]".into()), 1.into()),
-            DataField::new_opt(DataType::Digit, Some("nums/[1]".into()), 2.into()),
-            DataField::new_opt(DataType::Digit, Some("nums/[2]".into()), 3.into()),
+            DataField::new_opt(DataType::Int, Some("nums/[0]".into()), 1.into()),
+            DataField::new_opt(DataType::Int, Some("nums/[1]".into()), 2.into()),
+            DataField::new_opt(DataType::Int, Some("nums/[2]".into()), 3.into()),
         ];
         let expected = DataField::from_arr("nums".to_string(), expected);
         assert_eq!(tdc.get_field_owned("nums"), Some(expected));
@@ -253,15 +254,15 @@ mod tests {
         let obj = DataField::from_arr(
             "array/[0]",
             vec![
-                DataField::new_opt(DataType::Digit, Some("array/[0]/[0]".into()), 1.into()),
-                DataField::new_opt(DataType::Digit, Some("array/[0]/[1]".into()), 2.into()),
+                DataField::new_opt(DataType::Int, Some("array/[0]/[0]".into()), 1.into()),
+                DataField::new_opt(DataType::Int, Some("array/[0]/[1]".into()), 2.into()),
             ],
         );
         let obj1 = DataField::from_arr(
             "array/[1]",
             vec![
-                DataField::new_opt(DataType::Digit, Some("array/[1]/[0]".into()), 3.into()),
-                DataField::new_opt(DataType::Digit, Some("array/[1]/[1]".into()), 4.into()),
+                DataField::new_opt(DataType::Int, Some("array/[1]/[0]".into()), 3.into()),
+                DataField::new_opt(DataType::Int, Some("array/[1]/[1]".into()), 4.into()),
             ],
         );
         assert_eq!(

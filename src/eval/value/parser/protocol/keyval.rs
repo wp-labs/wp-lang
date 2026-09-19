@@ -7,6 +7,7 @@ use crate::eval::value::parser::physical::foundation::gen_chars;
 use crate::eval::value::parser::{ParserFactory, protocol};
 use crate::parser::error::IntoWplCodeError;
 use crate::parser::utils::{quot_r_str, quot_str, take_kv_key, window_path};
+use crate::parser::wpl_field::wpl_meta_from_name;
 use wp_model_core::model::FNameStr;
 derive_base_prs!(KeyValP);
 
@@ -41,7 +42,7 @@ impl PatternParser for KeyValP {
     ) -> WplCodeResult<DataField> {
         let key = gen_chars(gnc, 3, false);
         if let Some(conf) = g_conf {
-            let meta = DataType::from(&conf.gen_type).map_err(|e| e.into_wpl_err())?;
+            let meta = wpl_meta_from_name(&conf.gen_type).map_err(|e| e.into_wpl_err())?;
             let parser = ParserFactory::create(&meta)?;
             let sep = f_conf.resolve_sep(&WplSep::default());
             let field = parser.generate(gnc, &sep, f_conf, Some(conf))?;
@@ -323,7 +324,7 @@ mod tests {
         let expected = vec![
             DataField::from_chars("y.a".to_string(), "hello".to_string()),
             DataField::from_chars("x.b".to_string(), "18".to_string()),
-            DataField::from_digit("x.c".to_string(), 20),
+            DataField::from_int("x.c".to_string(), 20),
         ];
         assert_eq!(
             tdc.items.iter().map(|s| s.as_field()).collect::<Vec<_>>(),
@@ -447,8 +448,8 @@ mod tests {
     fn asert_kv_x_obj(tdc: DataRecord) {
         let expected = vec![
             DataField::from_chars("x.a".to_string(), "hello".to_string()),
-            DataField::from_digit("x.b", 18),
-            DataField::from_digit("x.c".to_string(), 20),
+            DataField::from_int("x.b", 18),
+            DataField::from_int("x.c".to_string(), 20),
         ];
         assert_eq!(
             tdc.items.iter().map(|s| s.as_field()).collect::<Vec<_>>(),

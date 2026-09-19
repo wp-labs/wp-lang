@@ -6,7 +6,7 @@ pub use chars::CharsP;
 pub use ignore::IgnoreP;
 pub use symbol::PeekSymbolP;
 pub use symbol::SymbolP;
-use wp_model_core::model::DigitValue;
+use wp_model_core::model::IntValue;
 
 mod bool;
 mod chars;
@@ -18,8 +18,8 @@ mod symbol;
 #[derive(Eq, PartialEq, Debug, Default)]
 #[allow(dead_code)]
 pub struct DigitRange {
-    pub beg: DigitValue,
-    pub end: DigitValue,
+    pub beg: IntValue,
+    pub end: IntValue,
 }
 
 impl PartialOrd<Self> for DigitRange {

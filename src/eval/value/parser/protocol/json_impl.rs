@@ -230,12 +230,12 @@ impl JsonProc {
                     out.push(DataField::from_float(run_key, f));
                 } else if num.is_i64() {
                     if let Some(i_n) = num.as_i64() {
-                        out.push(DataField::from_digit(run_key, i_n));
+                        out.push(DataField::from_int(run_key, i_n));
                     }
                 } else if num.is_u64() {
                     if let Some(u) = num.as_u64() {
                         if u <= i64::MAX as u64 {
-                            out.push(DataField::from_digit(run_key, u as i64));
+                            out.push(DataField::from_int(run_key, u as i64));
                         } else {
                             // 超范围：保留精确性，降级为字符串
                             out.push(DataField::from_chars(
@@ -371,12 +371,12 @@ impl JsonProc {
                     return Some(DataField::from_float(name, f));
                 } else if num.is_i64() {
                     if let Some(i_n) = num.as_i64() {
-                        return Some(DataField::from_digit(name, i_n));
+                        return Some(DataField::from_int(name, i_n));
                     }
                 } else if num.is_u64() {
                     if let Some(u) = num.as_u64() {
                         if u <= i64::MAX as u64 {
-                            return Some(DataField::from_digit(name, u as i64));
+                            return Some(DataField::from_int(name, u as i64));
                         } else {
                             return Some(DataField::from_chars(name.to_string(), num.to_string()));
                         }

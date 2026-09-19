@@ -112,7 +112,7 @@ mod tests {
         let (tdc, _) = pipe.proc(0, data, 0).map_err(|e| e.into_wpl_err())?;
         if let Some(i) = tdc.field("key[0]") {
             println!("{}", i);
-            //assert_eq!(*i, TDOEnum::from_digit("cpu", 96));
+            //assert_eq!(*i, TDOEnum::from_int("cpu", 96));
         } else {
             panic!("json parse error");
         }
