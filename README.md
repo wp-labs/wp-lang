@@ -1,6 +1,9 @@
 # wp-lang
 
 ![CI](https://github.com/wp-labs/wp-lang/workflows/CI/badge.svg)
+[![crates.io](https://img.shields.io/crates/v/wp-lang.svg?logo=rust)](https://crates.io/crates/wp-lang)
+[![downloads](https://img.shields.io/crates/d/wp-lang.svg?logo=rust)](https://crates.io/crates/wp-lang)
+[![docs.rs](https://img.shields.io/docsrs/wp-lang?logo=docsdotrs)](https://docs.rs/wp-lang)
 [![codecov](https://codecov.io/gh/wp-labs/wp-lang/graph/badge.svg?token=6SVCXBHB6B)](https://codecov.io/gh/wp-labs/wp-lang)
 ![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)
 
