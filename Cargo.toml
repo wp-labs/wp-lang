@@ -1,6 +1,6 @@
 [package]
 name = "wp-lang"
-version = "0.7.0" #@gxl:set(version)
+version = "0.8.0" #@gxl:set(version)
 edition = "2024"
 description = "WPL language crate with AST, parser, evaluator, builtins, and generators."
 license = "Apache-2.0"
@@ -29,7 +29,7 @@ wp-parse-api = "0.13"
 wp-source-types = "0.3"
 wp-error = "0.13"
 wp-log = "0.5"
-wp-specs = "0.12"
+wp-specs = "0.13"
 orion-error = { version = "0.9", features = ["toml", "serde_json"] }
 wp_primitives = { package = "wp-primitives", version = "0.2" }
 derive-getters = "0.5"

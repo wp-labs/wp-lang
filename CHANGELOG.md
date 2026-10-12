@@ -1,4 +1,9 @@
 # Changelog
+## [0.8.0] - 2026-10-12
+
+### Changed
+- **依赖 `wp-specs` 0.12 → 0.13**：随 `wp-specs` 0.13（其公开 `ParamMap` 升级到 `wp-connector-api` 0.14），消除依赖图中重复的 `wp-connector-api`。消费方须一同升级。
+
 ## [0.7.0] - 2026-10-12
 
 ### Changed
