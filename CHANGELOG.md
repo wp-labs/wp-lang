@@ -1,4 +1,10 @@
 # Changelog
+## [0.7.0] - 2026-10-12
+
+### Changed
+- **升级到 orion-error 0.9**：`orion-error` 0.8 → 0.9（公共 API 兼容）。
+- 依赖升级：`wp-parse-api` 0.12 → 0.13、`wp-error` 0.12 → 0.13、`wp-log` 0.4 → 0.5。
+
 ## [0.6.0 Unreleased]
 
 ### ⚠️ BREAKING CHANGES
