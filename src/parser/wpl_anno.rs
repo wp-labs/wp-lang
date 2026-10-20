@@ -57,6 +57,12 @@ fn no_match(input: &mut &str) -> WResult<AnnEnum> {
     Ok(AnnEnum::NoMatch)
 }
 
+fn late_flag(input: &mut &str) -> WResult<AnnEnum> {
+    // late —— 无参 flag 注解，声明该 rule 参与自动匹配但固定排在普通 rule 之后
+    (multispace0, literal("late")).parse_next(input)?;
+    Ok(AnnEnum::Late)
+}
+
 pub fn ann_fun(input: &mut &str) -> WResult<AnnFun> {
     multispace0.parse_next(input)?;
     literal("#[")
@@ -64,7 +70,7 @@ pub fn ann_fun(input: &mut &str) -> WResult<AnnFun> {
         .parse_next(input)?;
     let x: Vec<AnnEnum> = separated(
         0..,
-        alt((wpl_tags, copy_raw, copy_event_parse, no_match)),
+        alt((wpl_tags, copy_raw, copy_event_parse, no_match, late_flag)),
         literal(","),
     )
     .parse_next(input)?;
@@ -88,6 +94,9 @@ pub fn ann_fun(input: &mut &str) -> WResult<AnnFun> {
             AnnEnum::NoMatch => {
                 af.no_match = true;
             }
+            AnnEnum::Late => {
+                af.late = true;
+            }
         }
     }
     Ok(af)
@@ -99,7 +108,7 @@ mod tests {
 
     use crate::ast::{AnnEnum, AnnFun};
     use crate::parser::utils::take_tag_kv;
-    use crate::parser::wpl_anno::{ann_fun, copy_event_parse, no_match, wpl_tags};
+    use crate::parser::wpl_anno::{ann_fun, copy_event_parse, late_flag, no_match, wpl_tags};
     use orion_error::dev::testing::TestAssert;
     use wp_primitives::Parser;
 
@@ -178,6 +187,7 @@ mod tests {
                 copy_raw: Some(("name".into(), "tq".into())),
                 copy_event_parse: None,
                 no_match: false,
+                late: false,
             }
         );
 
@@ -197,6 +207,7 @@ mod tests {
                 copy_raw: None,
                 copy_event_parse: None,
                 no_match: false,
+                late: false,
             }
         );
 
@@ -213,6 +224,7 @@ mod tests {
                 copy_raw: Some(("name".into(), "tq".into())),
                 copy_event_parse: None,
                 no_match: false,
+                late: false,
             }
         );
     }
@@ -239,6 +251,7 @@ mod tests {
                 copy_raw: None,
                 copy_event_parse: Some("raw_event".into()),
                 no_match: false,
+                late: false,
             }
         );
     }
@@ -261,6 +274,7 @@ mod tests {
                 copy_raw: None,
                 copy_event_parse: None,
                 no_match: true,
+                late: false,
             }
         );
 
@@ -274,7 +288,117 @@ mod tests {
                 copy_raw: Some(("name".into(), "tq".into())),
                 copy_event_parse: None,
                 no_match: true,
+                late: false,
             }
         );
+    }
+
+    #[test]
+    fn test_late() {
+        assert_eq!(late_flag.parse("late").assert(), AnnEnum::Late);
+
+        // 纯 flag 注解
+        assert_eq!(
+            ann_fun.parse(r#"#[late]"#).assert(),
+            AnnFun {
+                tags: Default::default(),
+                copy_raw: None,
+                copy_event_parse: None,
+                no_match: false,
+                late: true,
+            }
+        );
+
+        // 与其它注解混用
+        assert_eq!(
+            ann_fun.parse(r#"#[late, copy_raw(name:"tq")]"#).assert(),
+            AnnFun {
+                tags: Default::default(),
+                copy_raw: Some(("name".into(), "tq".into())),
+                copy_event_parse: None,
+                no_match: false,
+                late: true,
+            }
+        );
+    }
+
+    #[test]
+    fn test_late_whitespace_and_duplicates() {
+        let expected = AnnFun {
+            late: true,
+            ..Default::default()
+        };
+        assert_eq!(ann_fun.parse("#[ late ]").assert(), expected);
+        assert_eq!(ann_fun.parse("#[\n  late\n]").assert(), expected);
+        assert_eq!(ann_fun.parse("#[late, late]").assert(), expected);
+    }
+
+    #[test]
+    fn test_late_with_no_match() {
+        assert_eq!(
+            ann_fun.parse("#[no_match, late]").assert(),
+            AnnFun {
+                no_match: true,
+                late: true,
+                ..Default::default()
+            }
+        );
+        assert_eq!(
+            ann_fun.parse("#[late, no_match]").assert(),
+            AnnFun {
+                no_match: true,
+                late: true,
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn test_late_position_independent() {
+        let with_late_first = ann_fun.parse(r#"#[late, tag(k:"v")]"#).assert();
+        let with_late_last = ann_fun.parse(r#"#[tag(k:"v"), late]"#).assert();
+        assert_eq!(with_late_first, with_late_last);
+        assert!(with_late_first.late);
+        assert_eq!(with_late_first.tags.get("k").map(|v| v.as_str()), Some("v"));
+    }
+
+    #[test]
+    fn test_late_prefix_is_rejected() {
+        // 不完整的 flag 不能静默通过，否则拼写错误会被当成普通注解吞掉
+        for input in [
+            "#[latex]",
+            "#[lat]",
+            "#[latency]",
+            "#[Late]",
+            "#[LATE]",
+            "#[late()]",
+        ] {
+            assert!(ann_fun.parse(input).is_err(), "{input} should not parse");
+        }
+    }
+
+    #[test]
+    fn test_annotation_debug_roundtrip() {
+        use crate::ast::debug::DebugFormat as _;
+
+        let code = r#"#[tag(k:"v"), copy_raw(name:"raw"), no_match, late]"#;
+        let parsed = ann_fun.parse(code).assert();
+        let rendered = parsed.fmt_string().expect("format annotation");
+        assert_eq!(rendered.trim(), code);
+
+        let reparsed = ann_fun.parse(rendered.trim()).assert();
+        assert_eq!(reparsed, parsed);
+    }
+
+    #[test]
+    fn test_bare_flag_debug_roundtrip() {
+        use crate::ast::debug::DebugFormat as _;
+
+        for code in ["#[late]", "#[no_match]", "#[no_match, late]"] {
+            let parsed = ann_fun.parse(code).assert();
+            let rendered = parsed.fmt_string().expect("format annotation");
+            assert_eq!(rendered.trim(), code, "roundtrip for {code}");
+            assert_eq!(ann_fun.parse(rendered.trim()).assert(), parsed);
+        }
     }
 }

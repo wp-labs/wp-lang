@@ -556,4 +556,112 @@ package test {
         let packages = wpl_package.parse(data).assert();
         assert_eq!(packages.to_string(), expect);
     }
+
+    #[test]
+    fn test_package_late_annotation_inherited() {
+        let data = r#"
+#[late]
+package test {
+    rule a { (digit) }
+    rule b { (digit) }
+}
+"#;
+        let package = wpl_package.parse(data).assert();
+        for rule in package.rules.iter() {
+            assert!(
+                rule.statement.tags().as_ref().is_some_and(|t| t.late),
+                "package-level #[late] should be inherited by every rule"
+            );
+        }
+    }
+
+    #[test]
+    fn test_rule_level_late_without_package_annotation() {
+        let data = r#"
+package test {
+    #[late]
+    rule only_late { (digit) }
+    rule normal { (digit) }
+}
+"#;
+        let package = wpl_package.parse(data).assert();
+        let late = package
+            .rules
+            .iter()
+            .find(|r| r.name().as_str() == "only_late")
+            .expect("only_late present");
+        let normal = package
+            .rules
+            .iter()
+            .find(|r| r.name().as_str() == "normal")
+            .expect("normal present");
+        assert!(late.statement.tags().as_ref().is_some_and(|t| t.late));
+        assert!(
+            normal.statement.tags().as_ref().is_none_or(|t| !t.late),
+            "normal rule must not inherit late"
+        );
+    }
+
+    #[test]
+    fn test_package_and_rule_flags_merge_as_union() {
+        // 包级 late + 规则级 no_match：两者都应生效
+        let data = r#"
+#[late]
+package test {
+    #[no_match]
+    rule tool { (digit) }
+    rule plain { (digit) }
+}
+"#;
+        let package = wpl_package.parse(data).assert();
+        for rule in package.rules.iter() {
+            let tags = rule.statement.tags().as_ref().expect("tags merged");
+            assert!(tags.late, "package late inherited");
+        }
+        let tool = package
+            .rules
+            .iter()
+            .find(|r| r.name().as_str() == "tool")
+            .expect("tool present");
+        assert!(
+            tool.statement.tags().as_ref().is_some_and(|t| t.no_match),
+            "rule-level no_match preserved"
+        );
+    }
+
+    #[test]
+    fn test_late_survives_package_roundtrip() {
+        let data = r#"
+package test {
+    #[late]
+    rule catch_all { (chars\0) }
+    rule normal { (digit) }
+}
+"#;
+        let package = wpl_package.parse(data).assert();
+        let rendered = package.to_string();
+        let reparsed = wpl_package.parse(rendered.as_str()).assert();
+
+        let late = reparsed
+            .rules
+            .iter()
+            .find(|r| r.name().as_str() == "catch_all")
+            .expect("catch_all present");
+        assert!(
+            late.statement.tags().as_ref().is_some_and(|t| t.late),
+            "#[late] must survive DebugFormat roundtrip"
+        );
+    }
+
+    #[test]
+    fn test_late_annotation_adjacent_to_rule() {
+        // 注解与 rule 关键字之间可以没有换行（依赖 multispace0）
+        let data = r#"package test { #[late] rule a { (digit) } }"#;
+        let package = wpl_package.parse(data).assert();
+        let rule = package.rules.front().expect("rule present");
+        assert!(
+            rule.statement.tags().as_ref().is_some_and(|t| t.late),
+            "#[late] immediately followed by rule should parse"
+        );
+    }
 }

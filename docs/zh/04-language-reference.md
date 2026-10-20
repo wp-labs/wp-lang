@@ -12,7 +12,7 @@
 | [语法元素](#-语法元素) | 基本结构、字段定义、格式控制 |
 | [子字段语法](#-子字段语法) | JSON、KV、数组子字段 |
 | [JSON-like 路由](#-json-like-路由) | `json_like`、`json`、`bad_json` 的配合方式 |
-| [注解](#-注解) | tag、copy_raw、copy_event_parse、no_match 注解 |
+| [注解](#-注解) | tag、copy_raw、copy_event_parse、no_match、late 注解 |
 | [语法速查](#-语法速查) | 常用模式快速参考 |
 
 ---
@@ -369,6 +369,27 @@ rule raw_event { (chars\0) }
 
 - 装配时仍为它建 pipeline（含 sink 绑定），供旁路 record 经其 `wpl_key` 路由；只是 `parse_event` 跳过它不自动匹配。
 - 无参数 flag 注解。
+
+### late 注解
+
+声明该 rule **仍参与 `parse_event` 自动匹配，但固定排在普通 rule 之后**。
+
+```wpl
+package /app {
+  rule json_err { (json(chars@level), json(chars@msg)) }
+  rule kv_err   { (kvarr(chars@k, chars@v)) }
+
+  #[late]
+  rule catch_all { (chars\0) }
+}
+```
+
+- 引擎按「先普通、后 late」分层尝试；`late` 规则即使命中次数很高，也不会被命中率排序提升到普通规则之前。
+- `late` 层内部仍按命中次数降序排序，同分按声明顺序。
+- 用于兜底规则（catch-all）：避免它因匹配面广、命中次数高而抢占更具体的规则。
+- 无参数 flag 注解；可写在 rule 上，也可写在 package 上（整包所有规则继承）。
+- 与 `#[no_match]` 同时声明时，`no_match` 优先（规则完全不自动匹配）。
+- 注意：普通规则若已消费 ≥80% 的 payload，会直接返回 `Partial`，此时 `late` 规则不会再尝试；`late` 保证的是「最后尝试」，不是「普通规则必须完全失败」。
 
 ### 原始字符串（避免转义）
 

@@ -171,6 +171,7 @@ mod tests {
             copy_raw: None,
             copy_event_parse: None,
             no_match: false,
+            late: false,
         };
         let tag = AnnotationType::convert(&Some(ann));
         let mut data = DataRecord::test_value();
@@ -192,6 +193,7 @@ mod tests {
             copy_raw: Some(("name".into(), "raw".into())),
             copy_event_parse: None,
             no_match: false,
+            late: false,
         };
         let tag = AnnotationType::convert(&Some(ann));
         let mut data = DataRecord::test_value();
@@ -250,6 +252,7 @@ mod tests {
             copy_raw: Some(("name".into(), raw_key.into())),
             copy_event_parse: None,
             no_match: false,
+            late: false,
         }))
     }
 
@@ -262,6 +265,7 @@ mod tests {
             copy_raw: None,
             copy_event_parse: Some(rule_name.into()),
             no_match: false,
+            late: false,
         }));
         for ann in &mut funcs {
             if let AnnotationType::CopyEventParse(c) = ann {
@@ -304,6 +308,7 @@ mod tests {
             copy_raw: None,
             copy_event_parse: Some("raw_event".into()),
             no_match: false,
+            late: false,
         }));
         let mut data = DataRecord::test_value();
         let src = SourceEvent::new(

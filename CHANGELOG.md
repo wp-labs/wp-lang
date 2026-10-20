@@ -1,4 +1,18 @@
 # Changelog
+## [0.8.1] - 2026-10-20
+
+### ⚠️ BREAKING CHANGES
+- **`AnnFun` / `AnnEnum` shape change**: `AnnFun` gains a public `late` field and `AnnEnum` gains a `Late` variant. Downstream code that builds `AnnFun` with a struct literal or exhaustively matches `AnnEnum` must be updated.
+
+### Added
+- **`late` annotation**: Add a rule-level flag annotation `#[late]` declaring that a rule still participates in `parse_event` auto-matching but is always tried **after** ordinary rules. Hit-count optimization only reorders within a tier, so a catch-all rule can no longer be promoted ahead of more specific rules. Added `AnnEnum::Late` / `AnnFun.late` (merge takes the union, so a package-level `#[late]` is inherited by every rule), a bare `late` parser branch, and `DebugFormat` rendering. The flag is metadata consumed by the motor assembly/ordering layer, not an executable `AnnotationFunc`.
+
+### Fixed
+- **Annotation formatting dropped sibling items**: `DebugFormat for AnnFun` returned early when a rule had exactly one `tag`, silently omitting `copy_raw` / `copy_event_parse` / `no_match` / `late`; with zero tags it emitted the invalid `#[tag, ...]`. It now emits `#[` plus only the present items, comma-separated, and round-trips through the parser.
+
+### Docs
+- Document the `late` annotation in `04-language-reference`, both `06-grammar-reference` EBNF sections, and `wpl-rule-check`'s language reference.
+
 ## [0.8.0] - 2026-10-12
 
 ### Changed
