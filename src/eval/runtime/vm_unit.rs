@@ -25,6 +25,44 @@ use wp_primitives::WResult as ModalResult;
 pub type DataResult = Result<(DataRecord, String), WparseError>;
 pub const OPTIMIZE_TIMES: usize = 10000;
 
+/// 一次解析尝试的进度。
+///
+/// 多规则场景（如 `wp-motor` 的 `MultiParser`）用它判断「哪条规则走得最远」。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ParseProgress {
+    /// 已消费的字节数：成功时是残差起点，失败时是失败前的深度。
+    pub consumed: usize,
+    /// 本次实际解析的输入长度（preorder pipe 之后）。
+    pub total: usize,
+}
+
+impl ParseProgress {
+    pub fn new(consumed: usize, total: usize) -> Self {
+        Self { consumed, total }
+    }
+
+    /// `self` 是否严格比 `other` 走得更远。
+    ///
+    /// 按比例（`consumed / total`）比较，而不是直接比绝对字节数：不同规则可以带不同的
+    /// preorder pipe（如 `|decode/base64|`），产出的输入长度差异很大，绝对位置不可比。
+    /// 用整数交叉相乘避免浮点误差。
+    pub fn is_deeper_than(&self, other: &Self) -> bool {
+        match (self.consumed, other.consumed) {
+            // 双方都没推进（包括输入被 pipe 吃空）：没有「更深」可言，
+            // 让调用方保留先到的候选。
+            (0, 0) => false,
+            // 只有一方真的消费了字节，它就更深。
+            (_, 0) => true,
+            (0, _) => false,
+            // consumed > 0 时 total 必然 > 0，可以安全交叉相乘。
+            _ => {
+                (self.consumed as u128) * (other.total as u128)
+                    > (other.consumed as u128) * (self.total as u128)
+            }
+        }
+    }
+}
+
 pub trait IntoRawData {
     fn into_raw(self) -> RawData;
 }
@@ -96,9 +134,25 @@ impl WplEvaluator {
     /// 从引用解析，仅在 preorder 不为空时 clone 数据。
     /// 高频调用路径避免每条规则都 clone payload。
     pub fn proc_ref(&self, e_id: u64, data: &RawData, oth_suc_len: usize) -> DataResult {
+        self.proc_ref_progress(e_id, data, oth_suc_len).0
+    }
+
+    /// 与 [`Self::proc_ref`] 相同，但额外返回本次尝试的解析进度。
+    ///
+    /// 进度包含已消费字节数与该规则实际解析的输入长度，用于跨规则比较「谁走得最远」。
+    pub fn proc_ref_progress(
+        &self,
+        e_id: u64,
+        data: &RawData,
+        oth_suc_len: usize,
+    ) -> (DataResult, ParseProgress) {
         let owned: Option<RawData>;
         let working_raw: &RawData = if !self.preorder.is_empty() {
-            owned = Some(self.pipe_proc(e_id, data.clone())?);
+            owned = match self.pipe_proc(e_id, data.clone()) {
+                Ok(v) => Some(v),
+                // pipe 阶段就失败，没有任何字段被解析。
+                Err(e) => return (Err(e), ParseProgress::default()),
+            };
             owned.as_ref().unwrap()
         } else {
             data
@@ -112,23 +166,25 @@ impl WplEvaluator {
         let mut input: &str = input_holder.as_ref();
 
         let ori_len = input.len();
-        match self.parse_groups(e_id, &mut input) {
-            Ok(log) => Ok((log, input.to_string())),
+        let outcome = self.parse_groups(e_id, &mut input);
+        // parse_groups 失败时也会推进 input，因此这里始终能算出已消费字节数。
+        let progress = ParseProgress::new(ori_len - input.len(), ori_len);
+        match outcome {
+            Ok(log) => (Ok((log, input.to_string())), progress),
             Err(e) => {
-                let cur_pos = input.len();
-                let pos = ori_len - cur_pos;
-                if pos >= oth_suc_len {
+                if progress.consumed >= oth_suc_len {
                     let preview: String = if input.len() <= 80 {
                         input.to_string()
                     } else {
                         input.chars().take(80).collect()
                     };
-                    Err(WparseReason::data_error()
+                    let err = WparseReason::data_error()
                         .to_err()
-                        .with_detail(format!("{preview} @ {pos}"))
-                        .with_detail(e.to_string()))
+                        .with_detail(format!("{preview} @ {}", progress.consumed))
+                        .with_detail(e.to_string());
+                    (Err(err), progress)
                 } else {
-                    Err(WparseError::from(WparseReason::NotMatch))
+                    (Err(WparseError::from(WparseReason::NotMatch)), progress)
                 }
             }
         }
@@ -301,6 +357,7 @@ mod tests {
     use crate::ast::{WplField, WplFieldFmt};
     use crate::compat::New1;
     use crate::eval::builtins::raw_to_utf8_string;
+    use crate::eval::runtime::vm_unit::ParseProgress;
     use crate::eval::runtime::vm_unit::WplEvaluator;
     use crate::eval::value::parse_def::Hold;
     use crate::parser::error::IntoWplCodeError;
@@ -310,6 +367,7 @@ mod tests {
     use smol_str::SmolStr;
     use wp_model_core::raw::RawData;
     use wp_parse_api::PipeProcessor;
+    use wp_parse_api::WparseReason;
 
     #[test]
     fn log_test_ty() -> WplCodeResult<()> {
@@ -653,5 +711,91 @@ mod tests {
         println!("All processors: {:?}", processors);
 
         Ok(())
+    }
+
+    #[test]
+    fn proc_ref_progress_reports_consumed_bytes_on_success() {
+        let eval = WplEvaluator::from_code("rule t { (digit:a, chars\\0) }").assert();
+        let data = RawData::from_string("12abc");
+
+        let (result, progress) = eval.proc_ref_progress(0, &data, 0);
+        assert!(result.is_ok(), "rule should match: {result:?}");
+        assert_eq!(progress.consumed, 5);
+        assert_eq!(progress.total, 5);
+    }
+
+    #[test]
+    fn proc_ref_progress_reports_failure_depth() {
+        let eval = WplEvaluator::from_code("rule t { (digit:a, digit:b) }").assert();
+        let data = RawData::from_string("12abc");
+
+        let (result, progress) = eval.proc_ref_progress(0, &data, 0);
+        assert!(result.is_err(), "second digit should fail on `abc`");
+        assert_eq!(
+            progress.consumed, 2,
+            "failure depth should cover the matched digits"
+        );
+        assert_eq!(progress.total, 5);
+    }
+
+    #[test]
+    fn proc_ref_progress_reports_zero_depth_on_immediate_failure() {
+        let eval = WplEvaluator::from_code("rule t { (digit:a) }").assert();
+        let data = RawData::from_string("abc");
+
+        let (result, progress) = eval.proc_ref_progress(0, &data, 0);
+        assert!(result.is_err());
+        assert_eq!(progress.consumed, 0);
+        assert_eq!(progress.total, 3);
+    }
+
+    #[test]
+    fn proc_ref_progress_keeps_depth_when_downgraded_to_not_match() {
+        // 已消费深度不足 `oth_suc_len` 时错误降级为 NotMatch，但深度仍应如实返回。
+        let eval = WplEvaluator::from_code("rule t { (digit:a, digit:b) }").assert();
+        let data = RawData::from_string("12abc");
+
+        let (result, progress) = eval.proc_ref_progress(0, &data, 3);
+        let err = result.expect_err("rule should fail");
+        assert_eq!(err.reason(), &WparseReason::NotMatch);
+        assert_eq!(progress.consumed, 2);
+    }
+
+    #[test]
+    fn proc_ref_progress_reports_empty_total_on_empty_input() {
+        let eval = WplEvaluator::from_code("rule t { (digit:a) }").assert();
+        let data = RawData::from_string("");
+
+        let (result, progress) = eval.proc_ref_progress(0, &data, 0);
+        assert!(result.is_err());
+        assert_eq!(progress, ParseProgress::default());
+    }
+
+    #[test]
+    fn parse_progress_compares_by_ratio_not_absolute_bytes() {
+        // 两条规则的输入长度不同（preorder pipe 改变过长度），按绝对字节数会把
+        // 短输入规则判为“更浅”；按比例才是正确结论。
+        let short = ParseProgress::new(50, 100); // 50%
+        let long = ParseProgress::new(60, 1000); // 6%
+        assert!(short.is_deeper_than(&long));
+        assert!(!long.is_deeper_than(&short));
+    }
+
+    #[test]
+    fn parse_progress_equal_ratio_is_not_deeper() {
+        // 1/2 与 2/4 比例相等：不算更深，让调用方保留先到的候选。
+        let a = ParseProgress::new(1, 2);
+        let b = ParseProgress::new(2, 4);
+        assert!(!a.is_deeper_than(&b));
+        assert!(!b.is_deeper_than(&a));
+    }
+
+    #[test]
+    fn parse_progress_never_compares_deeper_against_empty_input() {
+        let empty = ParseProgress::default();
+        let full = ParseProgress::new(10, 10);
+        assert!(full.is_deeper_than(&empty));
+        assert!(!empty.is_deeper_than(&full));
+        assert!(!empty.is_deeper_than(&empty));
     }
 }

@@ -41,7 +41,7 @@ pub use eval::builtins::registry::{
     register_wpl_pipe_batch as register_preorder_pipe_unit_batch,
 };
 // Note: DataResult is now provided by wp-parse-api for plugin development
-pub use eval::{WparseError, WparseReason, WparseResult};
+pub use eval::{ParseProgress, WparseError, WparseReason, WparseResult};
 pub use parser::error::error_detail;
 pub use parser::parse_code::wpl_express;
 pub use parser::wpl_pkg::wpl_package;

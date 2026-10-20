@@ -16,7 +16,7 @@ where
 
 pub use builtins::PipeLineResult;
 pub use runtime::vm_unit::OPTIMIZE_TIMES;
-pub use runtime::vm_unit::{DataResult, WplEvaluator};
+pub use runtime::vm_unit::{DataResult, ParseProgress, WplEvaluator};
 pub use value::ParserFactory;
 pub use value::data_type::DataTypeParser;
 pub(crate) use value::literal;

@@ -1,4 +1,12 @@
 # Changelog
+## [0.8.2] - 2026-10-21
+
+### Added
+- **`WplEvaluator::proc_ref_progress`**: Same contract as `proc_ref`, but also returns a `ParseProgress` describing how far the attempt got — `consumed` (residue offset on success, failure depth on error) and `total` (the input length that rule actually parsed, i.e. after its `preorder` pipes). A pipe failing in the `preorder` stage reports `ParseProgress::default()`, since no field was parsed. `proc_ref` now delegates to it, so existing callers are unaffected.
+- **`ParseProgress::is_deeper_than`**: Ranks attempts by **ratio** (`consumed / total`), not by absolute byte offset, because different rules can carry different `preorder` pipes (`|decode/base64|` shrinks the input) and therefore parse inputs of unrelated lengths. Implemented with integer cross-multiplication, and falls back to a consumed-bytes comparison when either side is empty.
+
+  This lets multi-rule drivers rank candidates by how far they actually got. `wp-motor`'s `MultiParser` uses it to attribute a parse `Miss` to the rule that parsed furthest instead of the last rule that errored (which, with `#[late]`, is the catch-all fallback).
+
 ## [0.8.1] - 2026-10-20
 
 ### ⚠️ BREAKING CHANGES
