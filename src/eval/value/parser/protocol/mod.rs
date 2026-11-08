@@ -16,6 +16,7 @@ mod json_impl;
 pub mod keyval;
 pub mod kvarr;
 pub mod proto_text;
+pub mod xml;
 
 pub fn take_sub_tdo(
     e_id: u64,

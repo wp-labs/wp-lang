@@ -10,7 +10,7 @@
 |------|------|
 | [类型系统](#-类型系统) | 所有数据类型速查表 |
 | [语法元素](#-语法元素) | 基本结构、字段定义、格式控制 |
-| [子字段语法](#-子字段语法) | JSON、KV、数组子字段 |
+| [子字段语法](#-子字段语法) | JSON、KV、XML、数组子字段 |
 | [JSON-like 路由](#-json-like-路由) | `json_like`、`json`、`bad_json` 的配合方式 |
 | [注解](#-注解) | tag、copy_raw、copy_event_parse、no_match、late 注解 |
 | [语法速查](#-语法速查) | 常用模式快速参考 |
@@ -76,24 +76,25 @@
 | 29 | 数组 | `array` | `[1,2,3]` | 数组 |
 | 30 | 数字数组 | `array/digit` | `[1,2,3]` | 数字数组 |
 | 31 | 字符串数组 | `array/chars` | `["a","b"]` | 字符串数组 |
+| 32 | XML | `xml` | `<root><k>v</k></root>` | XML 文档，按元素名/路径提取 |
 
 ### 协议类型
 
 | # | 类型 | 标识符 | 样例 | 说明 |
 |---|------|--------|------|------|
-| 32 | HTTP请求 | `http/request` | `GET /path HTTP/1.1` | HTTP 请求行 |
-| 33 | HTTP状态 | `http/status` | `200`, `404` | HTTP 状态码 |
-| 34 | User-Agent | `http/agent` | `Mozilla/5.0...` | 浏览器 UA |
-| 35 | HTTP方法 | `http/method` | `GET`, `POST` | HTTP 方法 |
+| 33 | HTTP请求 | `http/request` | `GET /path HTTP/1.1` | HTTP 请求行 |
+| 34 | HTTP状态 | `http/status` | `200`, `404` | HTTP 状态码 |
+| 35 | User-Agent | `http/agent` | `Mozilla/5.0...` | 浏览器 UA |
+| 36 | HTTP方法 | `http/method` | `GET`, `POST` | HTTP 方法 |
 
 ### 特殊类型
 
 | # | 类型 | 标识符 | 样例 | 说明 |
 |---|------|--------|------|------|
-| 36 | 身份证 | `id_card` | `110101199001011234` | 18 位身份证 |
-| 37 | 手机号 | `mobile_phone` | `13800138000` | 11 位手机号 |
-| 38 | 协议文本 | `proto_text` | 协议格式 | 协议文本解析 |
-| 39 | 自动识别 | `auto` | 自动推断 | 自动类型推断 |
+| 37 | 身份证 | `id_card` | `110101199001011234` | 18 位身份证 |
+| 38 | 手机号 | `mobile_phone` | `13800138000` | 11 位手机号 |
+| 39 | 协议文本 | `proto_text` | 协议格式 | 协议文本解析 |
+| 40 | 自动识别 | `auto` | 自动推断 | 自动类型推断 |
 
 ---
 
@@ -202,6 +203,64 @@ json(chars@user/name, digit@user/age)
 
 # 可选字段
 json(chars@name, opt(chars)@email)
+```
+
+### XML 子字段
+
+```wpl
+xml(type@path, type@path, ...)
+```
+
+`xml(...)` 把一个 XML 文档解析成字段，语义与 `json(...)` 对齐：
+
+- **按路径取元素**：`chars@url` 取任意层级下名为 `url` 的元素（文档根元素透明），
+  `chars@packet/sip` 取嵌套路径
+- **与元素顺序无关**：元素在文档中的先后不影响输出，便于应对厂商版本差异
+- **缺失元素静默跳过**：配置了但文档里没有，不报错、不产出字段；
+  空元素（`<k></k>`、`<k/>`）对非 `chars` 类型同样按缺失处理，`chars` 保留空串
+- **未声明的元素自动产出**：默认按 `chars` 输出（与 `json` 一致），用 `_@key` 可丢弃
+- **文本实体已解码**：`&lt;` / `&amp;` / `&#xNN;` 会还原成原始字符；值的首尾空白会被裁剪
+- **命名空间前缀被忽略**：`ns:url` 走 `url` 路径；文档前的 BOM 会被跳过
+- **重复同名元素**：按出现顺序编号，首个保留原路径，其余命名为 `path/[i]`（与是否相邻无关）
+
+**示例：**
+```wpl
+# 基本提取（类型按子字段声明转换）
+xml(chars@url, ip@src_ip, digit@status_code)
+
+# 嵌套路径 + 重命名
+xml(chars@packet/sip:res_sip)
+
+# 不写子字段：所有叶子元素按 chars 输出
+(xml)
+```
+
+**限制：** 目前不解析元素属性，也不处理元素与子元素混排的文本；
+`opt(...)` 对 `xml` 没有额外作用（缺失字段本来就跳过）；
+只消费第一个根元素，其后内容留给后续字段。
+
+**典型场景：外层 JSON 内嵌 XML**
+
+厂商常把 XML 放在 JSON 的某个字段里（如深信服探针的 `result`）。
+`json` 子字段的值是 **JSON 转义后的文本**，需要先 `json_unescape()` 还原，
+再用分组管道交给 `xml(...)`：
+
+```wpl
+rule sangfor_probe_ips {
+  (
+    json(
+      chars@logtype,
+      ip@src_ip,
+      chars@result | json_unescape() | (
+        xml(
+          chars@url:res_url,
+          chars@user_agent:res_user_agent,
+          digit@status_code:res_status_code,
+        )
+      )
+    ) | f_chars_has(logtype, ips)
+  )
+}
 ```
 
 ### `bad_json`
@@ -435,6 +494,7 @@ opt(kvarr)             # 可选 KV 分组
 # 子字段
 json(chars@key)        # JSON 字段
 kvarr(digit@port)      # KV 字段
+xml(chars@url)         # XML 元素（顺序无关，缺失静默跳过）
 @path/to/field         # 嵌套路径
 ```
 

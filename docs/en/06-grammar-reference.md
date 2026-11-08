@@ -216,12 +216,13 @@ wsp1             = ( " " | "\t" | "\n" | "\r" ) { wsp } ;
 - Only subfields support `opt(type)` today; top-level fields do not
 - `peek_symbol(...)` is normalized to `symbol(...)` during parsing, while preserving peek semantics
 - `bad_json` is a local alias: its underlying type is treated as `Chars`, but `meta_name` remains `bad_json`
+- `xml` is a local alias too: its underlying type is treated as `Chars`, but `meta_name` remains `xml` and it is handled by `XmlP`
 
 ### Type names
 
 - This document no longer hardcodes the full type list
-- Available type names are whatever `wp_model_core::model::DataType::from(token)` accepts
-- So whether a `meta_token` is valid depends on the actual `DataType` implementation in the dependency version in use
+- Available type names are whatever `wp_model_core::model::DataType::from(token)` accepts; `digit`, `bad_json`, `kvarr_raw` and `xml` are WPL-local aliases
+- So whether a `meta_token` is valid depends on the actual `DataType` implementation and the WPL alias table in the dependency version in use
 
 ### Formats and separators
 

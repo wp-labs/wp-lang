@@ -7,10 +7,12 @@ use crate::eval::value::parser::ParserFactory;
 use crate::eval::value::parser::base::CharsP;
 use crate::eval::value::parser::protocol::bad_json::BadJsonP;
 use crate::eval::value::parser::protocol::kvarr::KvArrRawP;
+use crate::eval::value::parser::protocol::xml::XmlP;
 use crate::generator::FieldGenConf;
 use crate::generator::{FmtField, GenChannel};
 use crate::parser::error::WplCodeResult;
 use crate::parser::wpl_field::KVARR_RAW_META_NAME;
+use crate::parser::wpl_field::XML_META_NAME;
 use crate::parser::wpl_field::wpl_meta_from_name;
 use derive_getters::Getters;
 use wp_model_core::model::FNameStr;
@@ -99,6 +101,14 @@ impl FieldEvalUnit {
                 index,
                 conf,
                 Hold::new(KvArrRawP::default()),
+                group_enum,
+            ));
+        }
+        if conf.meta_name() == XML_META_NAME {
+            return Ok(FieldEvalUnit::new(
+                index,
+                conf,
+                Hold::new(XmlP::default()),
                 group_enum,
             ));
         }

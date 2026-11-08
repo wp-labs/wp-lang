@@ -1,4 +1,13 @@
 # Changelog
+## [0.9.0] - 2026-11-08
+
+### Added
+- **WPL `xml(...)` 结构化类型**：像 `json(...)` 一样把 XML 文档解析成字段。元素按**路径**匹配（`chars@url`、`chars@packet/sip`），与元素在文档中的顺序无关；缺失元素静默跳过，未声明元素自动按 `chars` 输出（用 `_@key` 丢弃）；文本实体（`&lt;` / `&amp;` / `&#xNN;`）自动解码，命名空间前缀被忽略，重复同名元素按 `path/[i]` 展开。不写子字段时（`(xml)`）输出全部叶子元素。
+- 支持 **JSON 内嵌 XML** 的常见形态（如深信服探针的 `result` 字段）：`chars@result | json_unescape() | (xml(chars@url:res_url, digit@status_code))`。
+
+### Changed
+- 新增依赖 `quick-xml` 0.41（XML 词法解析）。
+
 ## [0.8.2] - 2026-10-21
 
 ### Added

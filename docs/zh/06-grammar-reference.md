@@ -216,12 +216,13 @@ wsp1             = ( " " | "\t" | "\n" | "\r" ) { wsp } ;
 - 只有子字段支持 `opt(type)`，当前顶层字段不支持 `opt(type)`
 - `peek_symbol(...)` 在解析后会被规整为 `symbol(...)`，但保留 peek 语义
 - `bad_json` 是本地别名：底层类型按 `Chars` 处理，但 `meta_name` 保留为 `bad_json`
+- `xml` 是本地别名：底层类型按 `Chars` 处理，但 `meta_name` 保留为 `xml`，由 `XmlP` 解析
 
 ### 类型名
 
 - 文档不再硬编码完整类型列表
-- 当前可用类型由 `wp_model_core::model::DataType::from(token)` 决定
-- 因此是否支持某个 `meta_token`，要以实际依赖版本中的 `DataType` 实现为准
+- 当前可用类型由 `wp_model_core::model::DataType::from(token)` 决定，另外 `digit` / `bad_json` / `kvarr_raw` / `xml` 是 WPL 本地别名
+- 因此是否支持某个 `meta_token`，要以实际依赖版本中的 `DataType` 与 WPL 别名表为准
 
 ### 格式与分隔符
 

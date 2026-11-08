@@ -248,7 +248,7 @@ rule test_plugin {
 - 基础：`bool` `chars` `digit` `float` `_` `sn`
 - 时间：`time` `time_iso` `time_3339` `time_2822` `time_timestamp`
 - 网络：`ip` `ip_net` `domain` `email` `port`
-- 文本/协议：`hex` `base64` `kv` `kvarr` `kvarr_raw` `json` `exact_json` `http/request` `http/status` `http/agent` `http/method` `url`
+- 文本/协议：`hex` `base64` `kv` `kvarr` `kvarr_raw` `json` `exact_json` `xml` `http/request` `http/status` `http/agent` `http/method` `url`
 - 结构：`obj` `array[/subtype]` `symbol` `peek_symbol`
 
 更多产生式请参考《WPL 语法（EBNF）》：`./02-wpl_grammar.md`。

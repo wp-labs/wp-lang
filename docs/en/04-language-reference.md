@@ -52,6 +52,7 @@ JSON and KV subfields support optional member types:
 json(chars@name, opt(chars)@email)
 kvarr(chars@host, digit@port, opt(chars)@user)
 kvarr_raw(digit@port)
+xml(chars@url, ip@src_ip, digit@status_code)
 ```
 
 This is different from group-level `opt(...)`.
@@ -62,6 +63,47 @@ This is different from group-level `opt(...)`.
 kvarr_raw\,             # b=123 -> b: chars("123")
                          # url:http://host:80/path -> url: chars("http://host:80/path")
 kvarr_raw(digit@b)\,    # b=123 -> b: digit(123)
+```
+
+---
+
+## XML
+
+`xml(...)` turns an XML document into fields, mirroring `json(...)`:
+
+- Elements are matched by **path** (`url`, `packet/sip`), not by position, so the result does not depend on element order
+- The document root element is transparent: `<root><url>x</url></root>` yields `url`
+- Missing elements are skipped silently; empty elements (`<k></k>`, `<k/>`) are also treated as missing for non-`chars` types, while `chars` keeps an empty string
+- Undeclared elements are emitted as `chars`; use `_@key` to drop one
+- Text entities (`&lt;`, `&amp;`, `&#xNN;`) are decoded; leading/trailing whitespace is trimmed
+- Namespace prefixes are ignored; a leading BOM is skipped
+- Repeated sibling elements are numbered by occurrence: the first keeps the path, the rest use `path/[i]` (adjacency is irrelevant)
+
+```wpl
+xml(chars@url, ip@src_ip, digit@status_code)
+xml(chars@packet/sip:res_sip)
+(xml)                                    # every leaf element as chars
+```
+
+Limitations: element attributes and text mixed with child elements are not parsed;
+`opt(...)` has no extra effect for `xml` (missing fields are always skipped);
+only the first root element is consumed, the rest is left for following fields.
+
+**XML embedded in JSON** (for example the `result` field of Sangfor probe logs)
+arrives JSON-escaped, so unescape it before handing it to `xml(...)`:
+
+```wpl
+rule sangfor_probe_ips {
+  (
+    json(
+      chars@logtype,
+      ip@src_ip,
+      chars@result | json_unescape() | (
+        xml(chars@url:res_url, chars@user_agent:res_user_agent)
+      )
+    ) | f_chars_has(logtype, ips)
+  )
+}
 ```
 
 ---

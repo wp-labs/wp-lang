@@ -5,6 +5,7 @@ use crate::eval::value::parse_def::{FieldParser, PatternParser};
 use crate::generator::FieldGenConf;
 use crate::generator::{FmtField, GenChannel};
 use crate::parser::error::WplCodeResult;
+use crate::parser::wpl_field::XML_META_NAME;
 use crate::winnow::Parser;
 use wp_model_core::model::FNameStr;
 use wp_model_core::model::{DataField, DataType};
@@ -31,7 +32,9 @@ where
         f_name: Option<FNameStr>,
         out: &mut Vec<DataField>,
     ) -> ModalResult<()> {
-        let parse_pattern_first = if fpu.conf().meta_name() == BAD_JSON_META_NAME {
+        let parse_pattern_first = if fpu.conf().meta_name() == BAD_JSON_META_NAME
+            || fpu.conf().meta_name() == XML_META_NAME
+        {
             true
         } else {
             fpu.conf().meta_type().parse_patten_first()

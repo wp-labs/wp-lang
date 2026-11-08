@@ -23,6 +23,9 @@ use wp_primitives::utils::{RestAble, get_scope};
 
 const BAD_JSON_META_NAME: &str = "bad_json";
 pub const KVARR_RAW_META_NAME: &str = "kvarr_raw";
+/// WPL 的 XML 结构化类型关键字。`wp-model-core` 没有对应 `DataType`，
+/// 与 `bad_json` 一致：底层复用 `DataType::Chars`，由 `meta_name` 分发到 `XmlP`。
+pub const XML_META_NAME: &str = "xml";
 /// WPL 的整数类型关键字。wp-model-core 0.10 把 `DataType::Digit` 改名为
 /// `DataType::Int`（标签 "digit" → "int"），但 WPL 语言关键字保持 `digit`
 /// （见 `docs/*/04-language-reference` 与 `tree-sitter-wpl`），故在此显式保留别名。
@@ -43,12 +46,14 @@ fn resolve_meta_alias(token: &str) -> Option<DataType> {
         Some(DataType::KvArr)
     } else if token == DIGIT_META_NAME {
         Some(DataType::Int)
+    } else if token == XML_META_NAME {
+        Some(DataType::Chars)
     } else {
         None
     }
 }
 
-/// 解析 WPL 类型名：先查 WPL 别名（`digit`/`bad_json`/`kvarr_raw`），
+/// 解析 WPL 类型名：先查 WPL 别名（`digit`/`bad_json`/`kvarr_raw`/`xml`），
 /// 再回落到 wp-model-core 的规范名解析。
 pub fn wpl_meta_from_name(name: &str) -> Result<DataType, MetaErr> {
     match resolve_meta_alias(name) {
