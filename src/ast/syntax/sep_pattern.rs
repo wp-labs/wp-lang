@@ -403,21 +403,89 @@ impl SepPattern {
 }
 
 /// For a Star-at-start pattern, find how many bytes Star consumes (non-greedy)
-/// and how many bytes the remaining main segments consume.
-/// Returns `(star_bytes, rest_bytes)`.
-fn try_match_star_split(segments: &[GlobSegment], s: &str) -> Option<(usize, usize)> {
+/// and how many bytes the remaining main segments (plus the optional preserve
+/// tail) consume.
+/// Returns `(star_bytes, rest_bytes, preserve_bytes)`.
+///
+/// The preserve tail participates in the search: the earliest position where
+/// both the remaining main segments **and** the preserve tail match wins. This
+/// keeps `{*(key=)}` (Star + preserve) consistent with `{(key=)}` (preserve
+/// only), which also searches forward.
+fn try_match_star_split(
+    segments: &[GlobSegment],
+    preserve: Option<&[GlobSegment]>,
+    s: &str,
+) -> Option<(usize, usize, usize)> {
     debug_assert!(matches!(segments.first(), Some(GlobSegment::Star)));
     let remaining = &segments[1..];
+
+    let try_at = |star_bytes: usize| -> Option<(usize, usize)> {
+        let after = &s[star_bytes..];
+        let rest_len = try_match_segments(remaining, after)?;
+        let preserve_len = match preserve {
+            Some(segs) => try_match_segments(segs, &after[rest_len..])?,
+            None => 0,
+        };
+        Some((rest_len, preserve_len))
+    };
+
     // Non-greedy: try expanding Star from 0 chars upwards.
-    if let Some(rest_len) = try_match_segments(remaining, s) {
-        return Some((0, rest_len));
+    if let Some((rest_len, preserve_len)) = try_at(0) {
+        return Some((0, rest_len, preserve_len));
     }
-    let mut char_iter = s.char_indices();
-    while let Some((_, _)) = char_iter.next() {
-        let byte_pos = char_iter.clone().next().map(|(p, _)| p).unwrap_or(s.len());
-        let after = &s[byte_pos..];
-        if let Some(rest_len) = try_match_segments(remaining, after) {
-            return Some((byte_pos, rest_len));
+    for (idx, ch) in s.char_indices() {
+        let byte_pos = idx + ch.len_utf8();
+        if let Some((rest_len, preserve_len)) = try_at(byte_pos) {
+            return Some((byte_pos, rest_len, preserve_len));
+        }
+    }
+    None
+}
+
+/// Find the first position where an *anchored* pattern applies.
+///
+/// Used when `Star` may consume an arbitrary prefix, i.e. the preserve-only form
+/// `{(tail)}` and the equivalent `{*(tail)}`: the offset is the field content
+/// length and `consumed` is 0 because the preserve tail is not consumed.
+fn find_anchored(glob: &GlobPattern, haystack: &str) -> Option<(usize, SepMatch)> {
+    let preserve = glob.preserve.as_deref()?;
+    // Optimization: if first preserve segment is Literal, use str::find for fast skip.
+    if let Some(GlobSegment::Literal(first_lit)) = preserve.first() {
+        let lit = first_lit.as_str();
+        let mut search_start = 0;
+        while search_start <= haystack.len() {
+            let Some(pos) = haystack[search_start..].find(lit) else {
+                break;
+            };
+            let abs_pos = search_start + pos;
+            if let Some(plen) = try_match_segments(preserve, &haystack[abs_pos..]) {
+                return Some((
+                    abs_pos,
+                    SepMatch {
+                        consumed: 0,
+                        matched: plen,
+                    },
+                ));
+            }
+            let next_char_len = haystack[abs_pos..]
+                .chars()
+                .next()
+                .map(|c| c.len_utf8())
+                .unwrap_or(1);
+            search_start = abs_pos + next_char_len;
+        }
+        return None;
+    }
+    // General case: scan char by char.
+    for (pos, _) in haystack.char_indices() {
+        if let Some(plen) = try_match_segments(preserve, &haystack[pos..]) {
+            return Some((
+                pos,
+                SepMatch {
+                    consumed: 0,
+                    matched: plen,
+                },
+            ));
         }
     }
     None
@@ -427,64 +495,19 @@ fn try_match_star_split(segments: &[GlobSegment], s: &str) -> Option<(usize, usi
 fn glob_find(glob: &GlobPattern, haystack: &str) -> Option<(usize, SepMatch)> {
     let segs = &glob.segments;
     if segs.is_empty() {
-        // Only preserve – scan haystack for the first position where preserve matches.
-        // The offset is the field content length; consumed is 0 (preserve is not consumed).
-        if let Some(preserve) = &glob.preserve {
-            // Optimization: if first preserve segment is Literal, use str::find for fast skip.
-            if let Some(GlobSegment::Literal(first_lit)) = preserve.first() {
-                let lit = first_lit.as_str();
-                let mut search_start = 0;
-                while search_start <= haystack.len() {
-                    if let Some(pos) = haystack[search_start..].find(lit) {
-                        let abs_pos = search_start + pos;
-                        if let Some(plen) = try_match_segments(preserve, &haystack[abs_pos..]) {
-                            return Some((
-                                abs_pos,
-                                SepMatch {
-                                    consumed: 0,
-                                    matched: plen,
-                                },
-                            ));
-                        }
-                        let next_char_len = haystack[abs_pos..]
-                            .chars()
-                            .next()
-                            .map(|c| c.len_utf8())
-                            .unwrap_or(1);
-                        search_start = abs_pos + next_char_len;
-                    } else {
-                        break;
-                    }
-                }
-                return None;
-            }
-            // General case: scan char by char.
-            for (pos, _) in haystack.char_indices() {
-                if let Some(plen) = try_match_segments(preserve, &haystack[pos..]) {
-                    return Some((
-                        pos,
-                        SepMatch {
-                            consumed: 0,
-                            matched: plen,
-                        },
-                    ));
-                }
-            }
-            return None;
-        }
-        return None;
+        return find_anchored(glob, haystack);
     }
 
     // Star-at-start: Star's consumed bytes = field content (offset),
     // remaining segments' consumed bytes = separator (consumed).
     if matches!(segs.first(), Some(GlobSegment::Star)) {
-        let (star_bytes, rest_bytes) = try_match_star_split(segs, haystack)?;
-        let preserve_bytes = if let Some(preserve) = &glob.preserve {
-            let after_main = &haystack[star_bytes + rest_bytes..];
-            try_match_segments(preserve, after_main)?
-        } else {
-            0
-        };
+        // `{*(tail)}` — Star only consumes a prefix, so the search degenerates to
+        // the anchored form. Share its implementation (and its literal fast path).
+        if segs.len() == 1 && glob.preserve.is_some() {
+            return find_anchored(glob, haystack);
+        }
+        let (star_bytes, rest_bytes, preserve_bytes) =
+            try_match_star_split(segs, glob.preserve.as_deref(), haystack)?;
         return Some((
             star_bytes,
             SepMatch {
@@ -1150,6 +1173,132 @@ mod tests {
         let (off, m) = p.find("  =hello\n").unwrap();
         assert_eq!(off, 0);
         assert_eq!(m.consumed, 9);
+    }
+
+    #[test]
+    fn test_match_star_preserve_searches_forward() {
+        // `{*(key=)}` on "hello world key=value": Star must search forward for
+        // the preserve tail, and the tail itself is not consumed.
+        let p = build_pattern("*(key=)").unwrap();
+        let (off, m) = p.find("hello world key=value").unwrap();
+        assert_eq!(off, 12); // field content: "hello world "
+        assert_eq!(m.consumed, 0); // only the content before the tail is consumed
+        assert_eq!(m.matched, 4); // preserve "key="
+
+        // Already at the preserve position.
+        let (off, m) = p.find("key=value").unwrap();
+        assert_eq!(off, 0);
+        assert_eq!(m.consumed, 0);
+        assert_eq!(m.matched, 4);
+
+        // Preserve never matches.
+        assert!(p.find("hello world").is_none());
+    }
+
+    #[test]
+    fn test_match_star_preserve_keeps_searching_after_main_match() {
+        // `{*\s(key=)}` on "aa  bb  key=v": \s matches right after "aa", but the
+        // preserve tail does not match there, so the search must continue.
+        let p = build_pattern("*\\s(key=)").unwrap();
+        let (off, m) = p.find("aa  bb  key=v").unwrap();
+        assert_eq!(off, 6); // field content: "aa  bb"
+        assert_eq!(m.consumed, 2); // whitespace separator
+        assert_eq!(m.matched, 6); // "  " + preserve "key="
+    }
+
+    #[test]
+    fn test_match_star_preserve_earliest_and_matched_len() {
+        // Two occurrences: the earliest one wins.
+        let p = build_pattern("*(k=)").unwrap();
+        let (off, m) = p.find("ab k=1 cd k=2").unwrap();
+        assert_eq!(off, 3); // field content: "ab "
+        assert_eq!(m.consumed, 0); // preserve-only tail is never consumed
+        assert_eq!(m.matched, 2); // "k="
+
+        // `matched` includes the preserve tail; `consumed` only the main segments.
+        let p = build_pattern("*\\s(k=)").unwrap();
+        let (off, m) = p.find("ab k=1 cd k=2").unwrap();
+        assert_eq!(off, 2);
+        assert_eq!(m.consumed, 1); // the single space
+        assert_eq!(m.matched, 3); // space + "k="
+    }
+
+    #[test]
+    fn test_match_star_preserve_multibyte() {
+        let input = "中文前缀 下一段";
+        let p = build_pattern("*(下一)").unwrap();
+        let (off, m) = p.find(input).unwrap();
+
+        assert!(input.is_char_boundary(off));
+        assert_eq!(off, "中文前缀 ".len());
+        assert_eq!(m.consumed, 0);
+        assert_eq!(m.matched, "下一".len());
+        assert_eq!(&input[off..], "下一段");
+    }
+
+    #[test]
+    fn test_match_star_preserve_no_match() {
+        assert!(
+            build_pattern("*(<url>)")
+                .unwrap()
+                .find("no tags here")
+                .is_none()
+        );
+        assert!(build_pattern("*\\s(k=)").unwrap().find("a b c").is_none());
+    }
+
+    #[test]
+    fn test_match_preserve_only_non_literal_first_segment() {
+        // Preserve tail that does not start with a literal exercises the general scan
+        // (both for `(tail)` and its `*(tail)` form).
+        let only = build_pattern("(\\s)").unwrap();
+        let star = build_pattern("*(\\s)").unwrap();
+        let expected = (
+            2,
+            SepMatch {
+                consumed: 0,
+                matched: 3,
+            },
+        );
+        assert_eq!(only.find("ab   cd").unwrap(), expected);
+        assert_eq!(star.find("ab   cd").unwrap(), expected);
+        assert!(only.find("abcd").is_none());
+    }
+
+    #[test]
+    fn test_match_star_preserve_parity_with_preserve_only() {
+        // `{*(tail)}` must behave exactly like `{(tail)}`.
+        let star = build_pattern("*(gamma)").unwrap();
+        let only = build_pattern("(gamma)").unwrap();
+        for input in ["alpha beta gamma", "alpha gamma", "gamma", "alpha"] {
+            assert_eq!(star.find(input), only.find(input), "input={input:?}");
+        }
+    }
+
+    #[test]
+    fn test_find_then_match_at_start_consistency() {
+        // `read_until_sep` uses `find` while `consume_sep` uses `match_at_start`;
+        // the consumed length must agree for every pattern shape.
+        let cases = [
+            ("*(k=)", "ab k=1"),
+            ("*\\s(k=)", "ab k=1"),
+            ("*<url>", "x <url>v"),
+            ("(k=)", "ab k=1"),
+            ("(\\s)", "ab   cd"),
+            ("\\s=", "a  =b"),
+            ("key=*", "key=v"),
+        ];
+        for (pat, input) in cases {
+            let p = build_pattern(pat).unwrap();
+            let (off, m) = p
+                .find(input)
+                .unwrap_or_else(|| panic!("pattern={pat} should match"));
+            assert!(input.is_char_boundary(off), "pattern={pat}");
+            let at = p
+                .match_at_start(&input[off..])
+                .unwrap_or_else(|| panic!("pattern={pat} should match at offset {off}"));
+            assert_eq!(at.consumed, m.consumed, "pattern={pat}");
+        }
     }
 
     #[test]

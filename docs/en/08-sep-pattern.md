@@ -142,12 +142,15 @@ Preserved: key=value        ← remains in input stream, next field starts here
 ### Usage
 
 ```wpl
+# The field name comes before the pattern separator
 # Consume until before "command=", preserve "command=" for next field
-chars{*(command=)}
+chars:prefix{*(command=)}
 
 # Consume arbitrary content + whitespace area, preserve "next" for next field
-chars{*\s(next)}
+chars:preamble{*\s(next)}
 ```
+
+The preserve tail participates in the search: `*` keeps advancing until both the remaining main pattern **and** the preserve tail match (same as preserve-only patterns such as `(abc)`).
 
 ### Constraints
 
@@ -183,16 +186,17 @@ Input: src=192.168.1.1 dst=10.0.0.1 action=accept proto=TCP
 ```wpl
 rule kv_log {
   (
-    ip{*\s(dst=)}:src,
-    ip{*\s(action=)}:dst,
-    chars{*\s(proto=)}:action,
+    _{*src=},
+    ip:src{*dst=},
+    ip:dst{*action=},
+    chars:action{*proto=},
     chars:proto
   )
 }
 # Output: src=192.168.1.1, dst=10.0.0.1, action=accept, proto=TCP
 ```
 
-Explanation: Each field uses `{*\s(next_key=)}` to consume whitespace before the next key, while preserving the next key for subsequent fields.
+Explanation: `_{*src=}` eats the `src=` prefix first (otherwise `ip` would see `src=...`); each following field truncates itself at `{*next_key=}` and leaves `next_key=` for the next field. Note that **the field name goes before the pattern** (`ip:src{...}`).
 
 ### Scenario 2: Separator Contains Whitespace
 
@@ -204,10 +208,12 @@ Input: 192.168.1.1 | admin | 2024-01-01 10:00:00
 
 ```wpl
 rule pipe_sep {
-  (ip:client, chars:user, time:ts){\h|\h}
+  (ip:client, chars:user, time:ts)\| 
 }
 # Output: client=192.168.1.1, user=admin, ts=2024-01-01 10:00:00
 ```
+
+> Group-level separators currently support only shortcut separators (`\...`); whitespace around each field is skipped automatically. `{...}` pattern separators only work at field level.
 
 ### Scenario 3: Match to Specific Keyword
 
@@ -220,12 +226,12 @@ Input: user=admin role=root command=ls -la
 ```wpl
 rule cmd_log {
   (
-    chars{*(command=)}:prefix,
-    chars:command
+    chars:prefix{*(command=)},
+    kvarr:cmd
   )
 }
-# prefix = "user=admin role=root "
-# command = "ls -la" (preceding "command=" consumed by consume_sep)
+# prefix = "user=admin role=root" (trailing whitespace trimmed)
+# kvarr parses the preserved "command=ls -la" into command = "ls -la"
 ```
 
 ### Scenario 4: Field Name Followed by Variable Character
@@ -238,7 +244,11 @@ Input: field1: hello field2: world
 
 ```wpl
 rule field_var {
-  (chars{field?:\s}:f1, chars:f2)
+  (
+    _{field?:\s},
+    chars:f1{field?:\s},
+    chars:f2
+  )
 }
 # f1 = "hello", f2 = "world"
 ```
@@ -261,9 +271,9 @@ Pattern separators can be combined with field-level pipes.
 ```wpl
 rule combined {
   (
-    chars{*\s(src=)}:header,
+    chars:header{*\s(src=)},
     kvarr(\s):payload
-  ) |(take src)
+  )
 }
 ```
 
@@ -293,14 +303,14 @@ Not exactly the same. `\s` inside `{}` matches **one or more** consecutive white
 
 ### Q: Can pattern separators be used at group level?
 
-Yes. Like shortcut separators, pattern separators support both field-level and group-level:
+Not currently. `{...}` only takes effect at field level; use shortcut separators (`\...`) at group level (whitespace around each field is skipped automatically):
 
 ```wpl
 # Field level
-(chars{*=}, digit)
+(chars:name{*=}, digit:num)
 
-# Group level
-(chars, digit){*=}
+# Group level: shortcut separators only
+(chars:name, digit:num)\,
 ```
 
 ### Q: What if `*` matches to end of line?

@@ -142,12 +142,15 @@ chars{*:\s}
 ### 使用方式
 
 ```wpl
+# 字段名写在分隔符模式之前
 # 消费到 "command=" 之前，保留 "command=" 给下一个字段
-chars{*(command=)}
+chars:prefix{*(command=)}
 
 # 消费任意内容 + 空白区域，保留 "next" 给下一个字段
-chars{*\s(next)}
+chars:preamble{*\s(next)}
 ```
+
+保留段参与搜索：星号 `*` 会一直向前找到「剩余主模式 + 保留段」都能匹配的位置（与 `(abc)` 这类纯保留模式一致）。
 
 ### 约束
 
@@ -183,16 +186,17 @@ chars{*\s(next)}
 ```wpl
 rule kv_log {
   (
-    ip{*\s(dst=)}:src,
-    ip{*\s(action=)}:dst,
-    chars{*\s(proto=)}:action,
+    _{*src=},
+    ip:src{*dst=},
+    ip:dst{*action=},
+    chars:action{*proto=},
     chars:proto
   )
 }
 # 输出：src=192.168.1.1, dst=10.0.0.1, action=accept, proto=TCP
 ```
 
-说明：每个字段使用 `{*\s(next_key=)}` 消费到下一个 key 之前的空白，同时保留下一个 key 给后续字段。
+说明：`_{*src=}` 先把 `src=` 这个前缀吃掉（不然 `ip` 会看到 `src=...`）；后面的字段用 `{*next_key=}` 截断自己，并把 `next_key=` 留给下一个字段。注意**字段命名写在模式之前**（`ip:src{...}`）。
 
 ### 场景 2：分隔符中包含空白
 
@@ -204,10 +208,12 @@ rule kv_log {
 
 ```wpl
 rule pipe_sep {
-  (ip:client, chars:user, time:ts){\h|\h}
+  (ip:client, chars:user, time:ts)\| 
 }
 # 输出：client=192.168.1.1, user=admin, ts=2024-01-01 10:00:00
 ```
+
+> 组级分隔符目前只支持 `\...` 快捷分隔符（字段两侧的空白会被自动跳过），`{...}` 模式分隔符只在字段级生效。
 
 ### 场景 3：匹配到特定关键字
 
@@ -220,12 +226,12 @@ rule pipe_sep {
 ```wpl
 rule cmd_log {
   (
-    chars{*(command=)}:prefix,
-    chars:command
+    chars:prefix{*(command=)},
+    kvarr:cmd
   )
 }
-# prefix = "user=admin role=root "
-# command = "ls -la"（前面 "command=" 被 consume_sep 消费）
+# prefix = "user=admin role=root"（尾随空白被裁剪）
+# kvarr 把保留的 "command=ls -la" 解析成 command = "ls -la"
 ```
 
 ### 场景 4：字段名后跟变化字符
@@ -238,7 +244,11 @@ rule cmd_log {
 
 ```wpl
 rule field_var {
-  (chars{field?:\s}:f1, chars:f2)
+  (
+    _{field?:\s},
+    chars:f1{field?:\s},
+    chars:f2
+  )
 }
 # f1 = "hello", f2 = "world"
 ```
@@ -261,9 +271,9 @@ chars\:\:
 ```wpl
 rule combined {
   (
-    chars{*\s(src=)}:header,
+    chars:header{*\s(src=)},
     kvarr(\s):payload
-  ) |(take src)
+  )
 }
 ```
 
@@ -293,14 +303,14 @@ rule combined {
 
 ### Q: 可以在组级使用模式分隔符吗？
 
-可以。与快捷分隔符一样，模式分隔符支持字段级和组级：
+目前不行。`{...}` 只在字段级生效；组级分隔符请用 `\...` 快捷分隔符（字段两侧的空白会被自动跳过）：
 
 ```wpl
 # 字段级
-(chars{*=}, digit)
+(chars:name{*=}, digit:num)
 
-# 组级
-(chars, digit){*=}
+# 组级：只能用快捷分隔符
+(chars:name, digit:num)\,
 ```
 
 ### Q: `*` 匹配到行尾怎么办？

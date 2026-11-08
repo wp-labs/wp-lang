@@ -611,6 +611,104 @@ mod tests {
     }
 
     #[test]
+    fn test_pattern_preserve_only_star_skips_forward() {
+        // Star + preserve (`{*(tag)}`) must search forward like preserve-only,
+        // and leave the preserved text in the stream for the next field.
+        use crate::ast::syntax::sep_pattern::build_pattern;
+        let pat = build_pattern("*(<url>)").unwrap();
+        let sep = WplSep::field_sep_pattern(pat);
+        let mut data = "\n  <root>\n  <url>value</url>";
+
+        let skipped = sep.read_until_sep(&mut data).unwrap();
+        assert_eq!(skipped, "\n  <root>\n  ");
+        assert_eq!(data, "<url>value</url>");
+
+        // The preserve tail is matched but not consumed.
+        sep.try_consume_sep(&mut data).unwrap();
+        assert_eq!(data, "<url>value</url>");
+    }
+
+    #[test]
+    fn test_pattern_star_preserve_multiline_roundtrip() {
+        use crate::ast::syntax::sep_pattern::build_pattern;
+        let pat = build_pattern("*(<url>)").unwrap();
+        let sep = WplSep::field_sep_pattern(pat);
+        let mut data = "header line\n  <note>忽略</note>\n\t<url>值</url>tail";
+
+        let content = sep.read_until_sep(&mut data).unwrap();
+        assert_eq!(content, "header line\n  <note>忽略</note>\n\t");
+        assert_eq!(data, "<url>值</url>tail");
+
+        sep.try_consume_sep(&mut data).unwrap();
+        assert_eq!(data, "<url>值</url>tail");
+    }
+
+    #[test]
+    fn test_pattern_star_preserve_at_cursor_is_noop() {
+        use crate::ast::syntax::sep_pattern::build_pattern;
+        let pat = build_pattern("*(<url>)").unwrap();
+        let sep = WplSep::field_sep_pattern(pat);
+        let mut data = "<url>x</url>";
+
+        assert_eq!(sep.read_until_sep(&mut data).unwrap(), "");
+        assert_eq!(data, "<url>x</url>");
+        sep.try_consume_sep(&mut data).unwrap();
+        assert_eq!(data, "<url>x</url>");
+    }
+
+    #[test]
+    fn test_pattern_star_without_preserve_consumes_tag() {
+        // Without `()`, the tag itself is consumed as the separator.
+        use crate::ast::syntax::sep_pattern::build_pattern;
+        let pat = build_pattern("*<url>").unwrap();
+        let sep = WplSep::field_sep_pattern(pat);
+        let mut data = "prefix <url>value</url>";
+
+        assert_eq!(sep.read_until_sep(&mut data).unwrap(), "prefix ");
+        assert_eq!(data, "<url>value</url>");
+        sep.consume_sep(&mut data).unwrap();
+        assert_eq!(data, "value</url>");
+    }
+
+    #[test]
+    fn test_pattern_preserve_star_rule_end_to_end() {
+        // Skip an arbitrary preamble, keep `<url>` for `symbol`, then read the value.
+        use crate::WplEvaluator;
+        let pipe = WplEvaluator::from_code("rule t { (_{*(<url>)}, symbol(<url>), chars:v{</}) }")
+            .unwrap();
+        let (record, residue) = pipe
+            .proc(0, "\n  <root>\n  <url>value</url>\n</root>", 0)
+            .unwrap();
+        // Value is extracted; the closing tag name stays as residue.
+        assert_eq!(residue, "url>\n</root>");
+        assert!(matches!(
+            record.field("v").map(|f| f.get_value()),
+            Some(wp_model_core::model::Value::Chars(v)) if v.as_str() == "value"
+        ));
+    }
+
+    #[test]
+    fn test_pattern_star_preserve_with_kvarr_documented_example() {
+        // Mirrors `08-sep-pattern.md` scenario 3.
+        use crate::WplEvaluator;
+        let pipe =
+            WplEvaluator::from_code("rule t { (chars:prefix{*(command=)}, kvarr:cmd) }").unwrap();
+        let (record, residue) = pipe
+            .proc(0, "user=admin role=root command=ls -la", 0)
+            .unwrap();
+
+        assert_eq!(residue, "");
+        assert!(matches!(
+            record.field("prefix").map(|f| f.get_value()),
+            Some(wp_model_core::model::Value::Chars(v)) if v.as_str() == "user=admin role=root"
+        ));
+        assert!(matches!(
+            record.field("command").map(|f| f.get_value()),
+            Some(wp_model_core::model::Value::Chars(v)) if v.as_str() == "ls -la"
+        ));
+    }
+
+    #[test]
     fn test_pattern_read_then_consume() {
         // Verify read_until_sep + consume_sep round-trip works correctly.
         use crate::ast::syntax::sep_pattern::build_pattern;
